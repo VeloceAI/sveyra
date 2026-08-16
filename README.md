@@ -7,7 +7,7 @@
 
 **SVEYRA is an AI-native personal style platform for intelligent styling, wardrobe management, fit, virtual try-on, beauty, and personalized shopping.**
 
-*developed by [VeloceAI](https://veloceai.in/)*
+developed by [VeloceAI](https://veloceai.in/)
 
 <kbd>status: in development</kbd> <kbd>license: proprietary</kbd> <kbd>python: 3.12</kbd> <kbd>backend: FastAPI</kbd> <kbd>database: Postgres</kbd> <kbd>frontend: React + Three.js</kbd>
 
