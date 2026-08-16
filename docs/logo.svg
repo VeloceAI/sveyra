@@ -1,24 +1,22 @@
-<svg width="160" height="160" viewBox="0 0 160 160" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+<svg width="180" height="72" viewBox="0 0 180 72" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
   <title id="title">SVEYRA logo</title>
-  <desc id="desc">A refined SVEYRA monogram shaped like a styling ribbon and mirror.</desc>
+  <desc id="desc">A minimal styling ribbon and mirror mark for SVEYRA.</desc>
   <defs>
-    <linearGradient id="frame" x1="32" y1="20" x2="128" y2="140" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#151824"/>
-      <stop offset="1" stop-color="#05070D"/>
-    </linearGradient>
-    <linearGradient id="ribbon" x1="40" y1="42" x2="122" y2="120" gradientUnits="userSpaceOnUse">
+    <linearGradient id="ribbon" x1="52" y1="13" x2="128" y2="59" gradientUnits="userSpaceOnUse">
       <stop stop-color="#18C7A8"/>
-      <stop offset="0.5" stop-color="#4C5FE8"/>
-      <stop offset="1" stop-color="#C84DDC"/>
+      <stop offset="0.48" stop-color="#4C5FE8"/>
+      <stop offset="1" stop-color="#8B5CF6"/>
     </linearGradient>
-    <linearGradient id="highlight" x1="58" y1="46" x2="112" y2="108" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#FFFFFF"/>
-      <stop offset="1" stop-color="#E9FFFA"/>
+    <linearGradient id="line" x1="28" y1="36" x2="152" y2="36" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#151824"/>
+      <stop offset="0.5" stop-color="#4C5FE8"/>
+      <stop offset="1" stop-color="#18C7A8"/>
     </linearGradient>
   </defs>
-  <rect x="18" y="18" width="124" height="124" rx="38" fill="url(#frame)"/>
-  <path d="M80 31C98 31 114 41 123 57L111 65C104 52 93 45 80 45C65 45 54 53 54 64C54 74 63 79 82 82C110 86 123 96 123 114C123 136 102 148 78 148C57 148 40 138 31 121L43 113C51 127 63 134 79 134C96 134 109 127 109 115C109 105 100 99 80 96C53 92 40 82 40 65C40 45 57 31 80 31Z" fill="url(#ribbon)"/>
-  <path d="M54 64C54 53 65 45 80 45C93 45 104 52 111 65L99 73C94 64 88 59 79 59C69 59 62 63 62 69C62 75 69 78 84 81C89 82 94 83 99 85C93 91 84 95 73 95C51 95 40 84 40 66V65C40 45 57 31 80 31C98 31 114 41 123 57L111 65C104 52 93 45 80 45C65 45 54 53 54 64Z" fill="url(#highlight)" fill-opacity="0.88"/>
-  <path d="M47 112C55 128 66 137 81 137C97 137 109 129 109 116C109 110 106 105 100 102" stroke="#F8FAFC" stroke-width="7" stroke-linecap="round"/>
-  <path d="M50 31L80 18L110 31" stroke="#18C7A8" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M34 36H58" stroke="url(#line)" stroke-width="8" stroke-linecap="round"/>
+  <path d="M122 36H146" stroke="url(#line)" stroke-width="8" stroke-linecap="round"/>
+  <path d="M59 36C68 17 87 13 100 25C109 33 114 43 122 36" stroke="url(#ribbon)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M121 36C112 55 93 59 80 47C71 39 66 29 58 36" stroke="url(#ribbon)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M72 36C78 27 88 24 97 30" stroke="#E9FFFA" stroke-opacity="0.72" stroke-width="4" stroke-linecap="round"/>
+  <path d="M108 36C102 45 92 48 83 42" stroke="#E9FFFA" stroke-opacity="0.72" stroke-width="4" stroke-linecap="round"/>
 </svg>

@@ -1,11 +1,13 @@
 <div align="center">
-<img src="docs/logo.svg?v=2" width="96" height="96" alt="SVEYRA logo" /><br/>
+<img src="docs/logo.svg?v=3" width="126" height="50" alt="SVEYRA logo" /><br/>
 
 # SVEYRA
 
+---
+
 **SVEYRA is an AI-native personal style platform for intelligent styling, wardrobe management, fit, virtual try-on, beauty, and personalized shopping.**
 
-Developed by **VeloceAI**
+*developed by [VeloceAI](https://veloceai.in/)*
 
 <kbd>status: in development</kbd> <kbd>license: proprietary</kbd> <kbd>python: 3.12</kbd> <kbd>backend: FastAPI</kbd> <kbd>database: Postgres</kbd> <kbd>frontend: React + Three.js</kbd>
 
