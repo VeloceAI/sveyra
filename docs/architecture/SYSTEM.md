@@ -40,10 +40,12 @@ sequenceDiagram
 
 ## Independent Boundaries
 
-- `apps/api` exposes product APIs.
-- `packages/database` owns schema migrations.
-- `packages/ai` owns prompt and model orchestration contracts.
-- `packages/ml` owns model adapter contracts.
+- `backend` exposes product APIs.
+- `frontend` owns the user experience.
+- `database` owns schema migrations.
+- `ai` owns prompt and model orchestration contracts.
+- `ml` owns model adapter contracts.
+- `shared` owns cross-layer vocabulary and contracts.
 - `services/cv` owns perception workflows.
 - `services/avatar` owns 3D identity and try-on workflows.
 - `services/recommendation` owns ranking and styling decisions.

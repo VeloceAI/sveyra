@@ -7,14 +7,12 @@ The product goal is to become a persistent personal style intelligence layer tha
 ## Repository Shape
 
 ```text
-apps/
-  web/                  Frontend app shell
-  api/                  FastAPI backend
-packages/
-  database/             Postgres schema and Alembic migrations
-  ai/                   LLM orchestration and prompts
-  ml/                   Model interfaces and experiment contracts
-  shared/               Shared contracts and constants
+frontend/               Frontend app shell
+backend/                FastAPI backend
+database/               Postgres schema and Alembic migrations
+ai/                     LLM orchestration and prompts
+ml/                     Model interfaces and experiment contracts
+shared/                 Shared contracts and constants
 services/
   cv/                   Computer vision service boundary
   avatar/               3D avatar and try-on service boundary
@@ -30,6 +28,16 @@ scripts/                First-run and developer scripts
 .claude/                Project agents and skills copied from Reprompt
 ```
 
+## Reference Repositories
+
+Reference repositories are tracked here:
+
+```text
+docs/research/SUPPORTING_REPOS.md
+```
+
+Use this file to evaluate third-party repos, priority, fit for SVEYRA, and license risk before adding them to product code.
+
 ## First Run
 
 1. Install Python 3.12, Node.js 22+, Docker Desktop, and Git.
@@ -43,7 +51,7 @@ docker compose -f infra/docker/docker-compose.yml up -d
 4. Start the API:
 
 ```powershell
-cd apps/api
+cd backend
 python -m venv .venv
 .venv\Scripts\Activate.ps1
 pip install -r requirements.txt
@@ -53,7 +61,7 @@ uvicorn app.main:app --reload
 5. Start the frontend when its framework is selected:
 
 ```powershell
-cd apps/web
+cd frontend
 npm install
 npm run dev
 ```

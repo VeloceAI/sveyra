@@ -54,7 +54,7 @@ erDiagram
 ## Migration Workflow
 
 ```powershell
-cd packages/database
+cd database
 alembic revision --autogenerate -m "describe change"
 alembic upgrade head
 ```
