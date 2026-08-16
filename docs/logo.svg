@@ -1,22 +1,21 @@
 <svg width="180" height="72" viewBox="0 0 180 72" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
   <title id="title">SVEYRA logo</title>
-  <desc id="desc">A minimal styling ribbon and mirror mark for SVEYRA.</desc>
+  <desc id="desc">A minimal SVEYRA style loop mark for personal fashion intelligence.</desc>
   <defs>
-    <linearGradient id="ribbon" x1="52" y1="13" x2="128" y2="59" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#18C7A8"/>
-      <stop offset="0.48" stop-color="#4C5FE8"/>
+    <linearGradient id="sveyraGradient" x1="50" y1="18" x2="130" y2="54" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#14B8A6"/>
+      <stop offset="0.5" stop-color="#4C5FE8"/>
       <stop offset="1" stop-color="#8B5CF6"/>
     </linearGradient>
-    <linearGradient id="line" x1="28" y1="36" x2="152" y2="36" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#151824"/>
-      <stop offset="0.5" stop-color="#4C5FE8"/>
-      <stop offset="1" stop-color="#18C7A8"/>
+    <linearGradient id="pinGradient" x1="60" y1="16" x2="120" y2="56" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F8FAFC"/>
+      <stop offset="1" stop-color="#B7FFF1"/>
     </linearGradient>
   </defs>
-  <path d="M34 36H58" stroke="url(#line)" stroke-width="8" stroke-linecap="round"/>
-  <path d="M122 36H146" stroke="url(#line)" stroke-width="8" stroke-linecap="round"/>
-  <path d="M59 36C68 17 87 13 100 25C109 33 114 43 122 36" stroke="url(#ribbon)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M121 36C112 55 93 59 80 47C71 39 66 29 58 36" stroke="url(#ribbon)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M72 36C78 27 88 24 97 30" stroke="#E9FFFA" stroke-opacity="0.72" stroke-width="4" stroke-linecap="round"/>
-  <path d="M108 36C102 45 92 48 83 42" stroke="#E9FFFA" stroke-opacity="0.72" stroke-width="4" stroke-linecap="round"/>
+  <path d="M53 36H35" stroke="#1B2132" stroke-width="8" stroke-linecap="round"/>
+  <path d="M145 36H127" stroke="#4C5FE8" stroke-width="8" stroke-linecap="round"/>
+  <path d="M53 36C63 18 82 14 94 27L101 35C111 47 127 45 135 33" stroke="url(#sveyraGradient)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M127 36C117 54 98 58 86 45L79 37C69 25 53 27 45 39" stroke="url(#sveyraGradient)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="90" cy="36" r="7" fill="url(#pinGradient)"/>
+  <path d="M83 18L90 10L97 18" stroke="#14B8A6" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>

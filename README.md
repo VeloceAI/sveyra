@@ -1,5 +1,5 @@
 <div align="center">
-<img src="docs/logo.svg?v=3" width="126" height="50" alt="SVEYRA logo" /><br/>
+<img src="docs/logo.svg?v=4" width="126" height="50" alt="SVEYRA logo" /><br/>
 
 # SVEYRA
 
@@ -7,9 +7,9 @@
 
 **SVEYRA is an AI-native personal style platform for intelligent styling, wardrobe management, fit, virtual try-on, beauty, and personalized shopping.**
 
-developed by [VeloceAI](https://veloceai.in/)
+*developed by [VeloceAI](https://veloceai.in/)*
 
-<kbd>status: in development</kbd> <kbd>license: proprietary</kbd> <kbd>python: 3.12</kbd> <kbd>backend: FastAPI</kbd> <kbd>database: Postgres</kbd> <kbd>frontend: React + Three.js</kbd>
+![Status](https://img.shields.io/badge/status-in%20development-4C5FE8) ![License](https://img.shields.io/badge/license-proprietary-8B5CF6) ![Python](https://img.shields.io/badge/python-3.12-14B8A6) ![Backend](https://img.shields.io/badge/backend-FastAPI-009688) ![Database](https://img.shields.io/badge/database-Postgres-336791) ![Frontend](https://img.shields.io/badge/frontend-React%20%2B%20Three.js-4C5FE8)
 
 SVEYRA learns a user's wardrobe, body profile, measurements, fit preferences,
 skin, hair, grooming needs, lifestyle, occasions, budget, and evolving tastes.
