@@ -1,0 +1,23 @@
+<svg width="160" height="160" viewBox="0 0 160 160" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">SVEYRA logo</title>
+  <desc id="desc">A polished monogram mark for SVEYRA by VeloceAI.</desc>
+  <defs>
+    <linearGradient id="gem" x1="28" y1="20" x2="132" y2="140" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#18C7A8"/>
+      <stop offset="0.46" stop-color="#4C5FE8"/>
+      <stop offset="1" stop-color="#D946EF"/>
+    </linearGradient>
+    <linearGradient id="thread" x1="44" y1="48" x2="116" y2="118" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#D8FFF7"/>
+    </linearGradient>
+    <filter id="softShadow" x="6" y="6" width="148" height="148" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="10" stdDeviation="10" flood-color="#101828" flood-opacity="0.18"/>
+    </filter>
+  </defs>
+  <rect width="160" height="160" rx="36" fill="#080A12"/>
+  <path d="M80 18L130 47V104L80 142L30 104V47L80 18Z" fill="url(#gem)" filter="url(#softShadow)"/>
+  <path d="M48 55C57 45 70 39 85 40C100 41 112 48 119 60L106 68C101 61 94 57 84 56C74 55 65 58 59 64C54 69 54 74 59 78C64 82 72 83 83 84C100 86 114 91 119 104C123 116 117 128 105 135C93 142 76 142 62 135C51 130 43 121 39 110L54 105C57 113 62 118 70 122C79 126 90 126 98 121C104 117 105 111 101 107C96 102 87 101 76 100C59 98 46 93 42 81C39 72 41 62 48 55Z" fill="url(#thread)"/>
+  <path d="M55 47L80 28L105 47" stroke="#FFFFFF" stroke-opacity="0.55" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M48 104L80 128L112 104" stroke="#080A12" stroke-opacity="0.28" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

@@ -1,8 +1,28 @@
+<div align="center">
+<img src="docs/logo.svg?v=1" width="88" height="88" alt="SVEYRA logo" /><br/>
+
 # SVEYRA
 
-SVEYRA is an AI-native personal fashion and lifestyle platform. It learns a user's wardrobe, body profile, measurements, fit preferences, skin, hair, grooming needs, lifestyle, occasions, budget, and evolving tastes.
+**Your personal style intelligence layer for wardrobe, fit, beauty, avatar, and commerce.**
 
-The product goal is to become a persistent personal style intelligence layer that connects digital wardrobe, physical identity, fashion discovery, beauty, brands, commerce, 3D avatar, and virtual try-on.
+*by VeloceAI*
+
+![Status](https://img.shields.io/badge/status-in%20development-4C5FE8)
+![License](https://img.shields.io/badge/license-proprietary-8B5CF6)
+![Python](https://img.shields.io/badge/python-3.12-14B8A6)
+![Backend](https://img.shields.io/badge/backend-FastAPI-009688)
+![Database](https://img.shields.io/badge/database-Postgres-336791)
+![Frontend](https://img.shields.io/badge/frontend-React%20%2B%20Three.js-D946EF)
+
+SVEYRA learns a user's wardrobe, body profile, measurements, fit preferences,
+skin, hair, grooming needs, lifestyle, occasions, budget, and evolving tastes.
+Over time, it becomes a persistent personal style intelligence layer connecting
+digital wardrobe, physical identity, fashion discovery, beauty, brands,
+commerce, 3D avatar, and virtual try-on.
+
+</div>
+
+---
 
 ## Repository Shape
 
@@ -27,6 +47,57 @@ docs/
 scripts/                First-run and developer scripts
 .claude/                Project agents and skills copied from Reprompt
 ```
+
+## What Each Folder Does
+
+| Folder | Purpose |
+| --- | --- |
+| `frontend/` | User-facing app for wardrobe, outfits, profile, avatar, try-on, shopping, and stylist chat. |
+| `backend/` | FastAPI product API using route, handler, service, repository structure. |
+| `database/` | Postgres schema, Alembic migrations, and database documentation. |
+| `ai/` | LLM prompts, AI orchestration contracts, stylist reasoning, and prompt versioning. |
+| `ml/` | Model adapters, CV/fit/size interfaces, experiments, metrics, and evaluation contracts. |
+| `shared/` | Shared domain vocabulary, constants, schemas, and cross-layer contracts. |
+| `services/` | Independent service boundaries for CV, avatar, and recommendation intelligence. |
+| `infra/` | Docker, deployment, environment, and infrastructure configuration. |
+| `docs/` | Product, architecture, database, workflow, research, and decision documents. |
+| `scripts/` | Developer setup, first-run, maintenance, and automation scripts. |
+
+## Isolation Rules
+
+The repo uses top-level independent folders:
+
+```text
+frontend/, backend/, database/, ai/, ml/, shared/, services/, infra/, docs/, scripts/
+```
+
+Detailed isolation rules are here:
+
+```text
+docs/architecture/ISOLATION_RULES.md
+```
+
+Short version:
+
+- Keep each layer independently understandable and replaceable.
+- Backend follows route, handler, service, repository.
+- Postgres and Alembic are the default database path.
+- AI and ML experiments stay behind stable contracts.
+- Avoid files above 500 lines unless there is a strong reason.
+- Avoid unused comments and empty docstrings.
+
+## Coding Practice
+
+- Prefer simple modules with clear ownership.
+- Keep routes thin and move product logic into services.
+- Keep repositories focused on database access only.
+- Add migrations for schema changes instead of editing database state manually.
+- Document new architecture decisions before implementation spreads.
+- Treat third-party model and research repos as references until license review is complete.
+- Keep tests close to behavior and scale coverage with risk.
+- Use explicit names for fashion, body, fit, beauty, and commerce concepts.
+- Do not mix frontend UI concerns into backend, AI, ML, or database folders.
+- Do not import raw notebooks, experiments, or external repos directly into product routes.
 
 ## Reference Repositories
 
