@@ -1,5 +1,5 @@
 <div align="center">
-<img src="docs/logo.svg?v=4" width="126" height="50" alt="SVEYRA logo" /><br/>
+<img src="docs/logo.svg?v=5" width="120" height="60" alt="SVEYRA logo" /><br/>
 
 # SVEYRA
 
@@ -138,10 +138,6 @@ npm run dev
 
 Each layer can evolve independently. The API owns request routing, handlers, services, repositories, and schemas. AI, ML, database, CV, avatar, and recommendation work live behind explicit contracts so experiments do not leak directly into product routes.
 
-## Remote
+## License
 
-GitHub remote:
-
-```text
-https://github.com/Veloce-AI/sveyra.git
-```
+Proprietary - Veloce AI. All rights reserved. See `LICENSE`.
