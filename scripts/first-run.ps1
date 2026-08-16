@@ -1,0 +1,10 @@
+$ErrorActionPreference = "Stop"
+
+Write-Host "SVEYRA first-run checklist"
+Write-Host "1. Copy .env.example to .env if needed."
+Write-Host "2. Start Postgres and Redis with Docker Compose."
+Write-Host "3. Create Python virtual environment in apps/api."
+Write-Host "4. Install API dependencies."
+Write-Host "5. Run Alembic migrations from packages/database."
+Write-Host "6. Start API with uvicorn."
+Write-Host "7. Install frontend dependencies when the frontend app is expanded."

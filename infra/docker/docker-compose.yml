@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: sveyra-postgres
+    environment:
+      POSTGRES_USER: sveyra
+      POSTGRES_PASSWORD: sveyra
+      POSTGRES_DB: sveyra
+    ports:
+      - "5432:5432"
+    volumes:
+      - sveyra-postgres-data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7
+    container_name: sveyra-redis
+    ports:
+      - "6379:6379"
+
+volumes:
+  sveyra-postgres-data:

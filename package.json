@@ -1,0 +1,11 @@
+{
+  "name": "sveyra",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/web"
+  ],
+  "scripts": {
+    "web:dev": "npm --workspace @sveyra/web run dev"
+  }
+}
