@@ -1,32 +1,17 @@
 <svg width="176" height="88" viewBox="0 0 176 88" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
   <title id="title">SVEYRA logo</title>
-  <desc id="desc">An S-shaped tailoring tape representing personal style, measurement, fit, and intelligent guidance.</desc>
+  <desc id="desc">A flowing S thread and tailoring needle representing personal fashion intelligence.</desc>
   <defs>
-    <linearGradient id="tape" x1="35" y1="18" x2="139" y2="70" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#14B8A6"/>
-      <stop offset="0.5" stop-color="#4C5FE8"/>
+    <linearGradient id="signature" x1="47" y1="18" x2="124" y2="71" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#10B8A6"/>
+      <stop offset="0.52" stop-color="#4C5FE8"/>
       <stop offset="1" stop-color="#8B5CF6"/>
-    </linearGradient>
-    <linearGradient id="edge" x1="46" y1="21" x2="128" y2="67" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#B9FFF4"/>
-      <stop offset="0.52" stop-color="#D8DEFF"/>
-      <stop offset="1" stop-color="#E7D7FF"/>
     </linearGradient>
   </defs>
 
-  <path d="M132 23C119 13 94 11 72 17C50 23 38 34 44 44C49 52 61 54 81 53L96 52C110 51 120 54 120 60C119 68 101 73 82 72C64 72 49 67 39 60" stroke="url(#tape)" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M128 20C115 15 94 15 76 20C57 25 49 33 51 39" stroke="url(#edge)" stroke-width="2" stroke-linecap="round" opacity="0.8"/>
-  <path d="M48 63C59 68 73 69 85 68C99 68 109 64 112 59" stroke="url(#edge)" stroke-width="2" stroke-linecap="round" opacity="0.72"/>
+  <path d="M124 23C111 12 87 12 68 19C51 25 46 36 58 42C68 47 89 42 101 48C115 56 103 68 85 70C68 71 55 66 47 59" stroke="url(#signature)" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
 
-  <g stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" opacity="0.88">
-    <path d="M61 24L64 30"/>
-    <path d="M75 18L77 25"/>
-    <path d="M91 15L92 22"/>
-    <path d="M104 57L106 64"/>
-    <path d="M88 61L89 68"/>
-    <path d="M72 61L71 68"/>
-  </g>
-
-  <circle cx="44" cy="44" r="3.5" fill="#F8FAFC"/>
-  <circle cx="44" cy="44" r="1.5" fill="#14B8A6"/>
+  <path d="M124 18V70" stroke="#202638" stroke-width="3" stroke-linecap="round"/>
+  <ellipse cx="124" cy="21" rx="3" ry="5" fill="#F8FAFC" stroke="#202638" stroke-width="2"/>
+  <path d="M124 70L121 76L127 70" fill="#202638"/>
 </svg>
