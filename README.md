@@ -1,5 +1,5 @@
 <div align="center">
-<img src="docs/logo.svg?v=7" width="120" height="60" alt="SVEYRA logo" /><br/>
+<img src="docs/logo.png?v=1" width="112" alt="SVEYRA logo" /><br/>
 
 # SVEYRA
 
