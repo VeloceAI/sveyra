@@ -9,7 +9,7 @@ SVEYRA is being built as an API-first personal style platform. The backend expos
 - the current Next.js web client
 - future Android and iOS clients
 
-Provider-specific systems (object storage backends, computer vision providers, and future LLM stylists) stay behind ports. Product routes, repositories, and authentication do not depend on a particular vendor SDK.
+Provider-specific systems (object storage backends, computer vision providers, shopping/commerce catalogs, and future LLM stylists) stay behind ports. Product routes, repositories, and authentication do not depend on a particular vendor SDK.
 
 ## Development flow implemented so far
 
@@ -61,11 +61,19 @@ Authenticated users can create, list, and fetch wardrobe items they own. Cross-u
 
 `POST /v1/recommendations` ranks owned wardrobe items for an occasion using wardrobe metadata, style signals, and fit preferences when available. Ranking runs through a provider-neutral `StylistPort` with a deterministic default. Results are ephemeral; clients may persist an accepted look through the outfits API. Image bytes are not loaded during recommendation.
 
-### 10. Wardrobe update and delete lifecycle
+### 10. Wardrobe gap analysis
+
+`POST /v1/recommendations/gaps` is authenticated. Identity comes from the JWT subject. The service inspects only the caller's wardrobe metadata and reports missing primary coverage buckets (`top`, `bottom`, `shoes`). Results are ephemeral. An empty wardrobe still returns HTTP 200 with all three buckets as gaps. Image bytes, computer vision, and LLM ranking are not used.
+
+### 11. Shopping recommendations through ShoppingPort
+
+`POST /v1/recommendations/shopping` is authenticated. Identity comes from the JWT subject. The service uses wardrobe-gap results plus the caller's style-profile budget when present, then asks a provider-neutral `ShoppingPort` for matching products. The default implementation is deterministic `StubShopping`, which returns mock products only (demo `example.com` URLs). It can filter those mock products by budget maximum and preferred brands. There is no live catalog, checkout, cart, or external commerce API. Results are ephemeral. This work did not add database tables or migrations.
+
+### 12. Wardrobe update and delete lifecycle
 
 Authenticated users can partially update wardrobe metadata and delete owned items. Deletion cascades linked media using the existing storage-first deletion behavior. Saved outfits are not rewritten and may retain historical item references.
 
-### 11. Next.js web client
+### 13. Next.js web client
 
 A thin authenticated Next.js + React + TypeScript client consumes the same backend APIs for:
 
@@ -76,11 +84,11 @@ A thin authenticated Next.js + React + TypeScript client consumes the same backe
 - garment enrichment
 - recommendations and saved outfits
 
-The web client uses Next.js rewrites to reach the API and stores the access token in session storage for this stage of development. There is no refresh-token flow yet.
+The web client does not currently expose dedicated wardrobe-gap or shopping screens. The web client uses Next.js rewrites to reach the API and stores the access token in session storage for this stage of development. There is no refresh-token flow yet.
 
-### 12. Future mobile clients
+### 14. Future mobile clients
 
-Android and iOS are not implemented in this repository yet. The current API contracts are intentionally client-agnostic so mobile apps can reuse the same authentication, wardrobe, media, enrichment, recommendation, and outfit endpoints.
+Android and iOS are not implemented in this repository yet. The current API contracts are intentionally client-agnostic so mobile apps can reuse the same authentication, wardrobe, media, enrichment, recommendation, gap, shopping, and outfit endpoints.
 
 ## Major capabilities present now
 
@@ -92,23 +100,25 @@ Android and iOS are not implemented in this repository yet. The current API cont
 - `StoragePort` with memory and GCS implementations
 - Garment enrichment behind `VisionPort` (stub default)
 - Deterministic recommendations behind `StylistPort` (stub default)
+- Wardrobe gap analysis at `POST /v1/recommendations/gaps`
+- Shopping recommendations at `POST /v1/recommendations/shopping` behind `ShoppingPort` (`StubShopping` mock catalog)
 - Style profile and body/fit persistence
-- Next.js authenticated web client for the core product flow
+- Next.js authenticated web client for the core product flow (no dedicated gap or shopping UI yet)
 - Automated backend test suite covering the implemented API behavior
 
 ## Current status
 
 The repository contains a working end-to-end foundation for the core product path:
 
-authenticate → manage profile and wardrobe → upload media → enrich garments → recommend outfits → save looks → manage wardrobe lifecycle → use the same APIs from the web client.
+authenticate → manage profile and wardrobe → upload media → enrich garments → recommend outfits → identify wardrobe gaps → receive stub shopping recommendations → save looks → manage wardrobe lifecycle → use the same core APIs from the web client.
 
 Verification confirmed from the repository at the time of this report:
 
-- Backend: `178 passed` from `python -m pytest -q` in `backend/`
-- Alembic head: `0006_user_password_hash`
-- Frontend: `npm run typecheck`, `npm run lint`, and `npm run build` for `@sveyra/web` completed successfully
+- Backend: `193 passed` from `python -m pytest -q` in `backend/`
+- Alembic head: `0006_user_password_hash` (no new migrations for gap or shopping)
+- Frontend: the existing Next.js client was not extended with wardrobe-gap or shopping screens in this work
 
-Production CV providers, LLM stylists, shopping/gap recommendations, avatar/try-on, and native mobile apps are not claimed as complete.
+Production CV providers, LLM stylists, live commerce providers, checkout/cart, Redis-backed workers, avatar/try-on, dedicated gap/shopping web screens, and native mobile apps are not claimed as complete.
 
 ## Next direction
 
@@ -116,7 +126,8 @@ The foundation and core API product flow are in place. Future work can expand wi
 
 - production-grade computer vision providers behind `VisionPort`
 - AI stylist / LLM providers behind `StylistPort`
-- wardrobe-gap and shopping recommendations
+- live commerce adapters behind `ShoppingPort` (replacing the mock stub)
+- dedicated wardrobe-gap and shopping screens in the web client
 - virtual try-on, avatar, and 3D experiences
 - Android and iOS clients against the same API contracts
 - background workers only when a concrete product need requires them

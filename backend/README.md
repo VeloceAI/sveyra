@@ -42,8 +42,11 @@ Implemented:
 - `DELETE /v1/media/{asset_id}`
 - `/v1/outfits`
 - `/v1/recommendations`
+- `POST /v1/recommendations/gaps`
+- `POST /v1/recommendations/shopping`
 
 Named for later milestones (not implemented):
+
 
 - `/v1/avatar`
 
@@ -85,7 +88,16 @@ Responses include `limit`, `offset`, and `total` plus the collection array.
 
 `POST /v1/recommendations` returns ephemeral, ranked outfit candidates for an occasion using the authenticated user's wardrobe metadata (`category`, `color`, `brand`, `attributes` including M18 `cv` cues), style-profile preferences/dislikes/budget, and latest body fit preferences when available. Image bytes and StoragePort/GCS are not used. Recommendations are not persisted; clients may save an accepted look via `POST /v1/outfits`. Ranking is deterministic by default behind `StylistPort` so a future AI/LLM adapter can replace it without changing the HTTP contract. An empty wardrobe returns `404 wardrobe_empty`. Insufficient items return `200` with an empty `recommendations` list.
 
+## Wardrobe gap analysis
+
+`POST /v1/recommendations/gaps` — authenticated. Body: `{}` (no required fields). The API identifies missing primary wardrobe coverage buckets (`top`, `bottom`, `shoes`) from the authenticated user's existing wardrobe metadata. No image bytes, external APIs, LLMs, or CV are used. Identity comes exclusively from the JWT; no `user_id` may be supplied in the request. Returns `200` always, including when the wardrobe is empty (all three buckets reported as gaps). Response shape: `{ "gaps": [ { "category": "top", "priority": "high", "reason": "..." } ] }`. Unexpected request fields return `422 validation_error`. Missing JWT returns `401 unauthorized`.
+
+## Shopping recommendations
+
+`POST /v1/recommendations/shopping` — authenticated. Body: `{}` (no required fields). The API generates commerce recommendations linked to wardrobe gaps. It calls the `GapService` to determine the user's missing categories and fetches the user's style budget preferences (from `style_profiles`). It then queries a provider-neutral `ShoppingPort` (which uses a deterministic `StubShopping` default implementation) to return mock shoppable products matching those gaps and budget criteria. No database migrations, live catalogs, checkout, or external API integrations are used. Response shape: `{ "products": [ { "id": "...", "name": "...", "brand": "...", "price": 0.0, "url": "...", "category": "...", "image_url": "..." } ] }`. Unexpected request fields return `422 validation_error`.
+
 GCS uses Application Default Credentials. Do not commit service-account JSON or private keys. For local GCS access, use `gcloud auth application-default login` or set `GOOGLE_APPLICATION_CREDENTIALS` to a local file outside the repository.
+
 
 `GET /v1/media/{asset_id}/access` returns a temporary access URL (`{"url": "..."}`) generated server-side from the stored opaque reference. URLs are ephemeral and are not persisted in PostgreSQL.
 
