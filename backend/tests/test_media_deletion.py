@@ -304,4 +304,3 @@ def test_commit_failure_leaves_metadata_and_retry_recovers(sqlite_engine) -> Non
     with pytest.raises(StorageObjectNotFoundError):
         storage.get(created.reference)
     session.close()
-

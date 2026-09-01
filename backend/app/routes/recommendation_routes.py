@@ -42,4 +42,3 @@ def shopping(
     user: User = Depends(get_current_user),
 ) -> ShoppingResponse:
     return recommend_shopping(payload, session, user)
-

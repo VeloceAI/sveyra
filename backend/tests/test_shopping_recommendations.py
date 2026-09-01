@@ -85,7 +85,7 @@ def test_partial_wardrobe_returns_only_gap_categories(client: TestClient) -> Non
 
 def test_shopping_respects_budget_max_limit(client: TestClient) -> None:
     _user_id, headers = register_and_auth(client, "shop-budget-max@example.com")
-    
+
     # Set budget constraint max = 50.0
     client.post(
         "/v1/profile",
