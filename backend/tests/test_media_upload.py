@@ -1,11 +1,19 @@
 from uuid import uuid4
 
+import pytest
 from fastapi.testclient import TestClient
 
+from app.core.config import settings
 from app.storage.memory import InMemoryStorage
 from tests.auth_helpers import register_and_auth
 
 UPLOAD_BYTES = b"example image bytes"
+UPLOAD_TOO_LARGE_ERROR = {
+    "error": {
+        "code": "upload_too_large",
+        "message": "Uploaded file exceeds the maximum allowed size.",
+    }
+}
 
 
 def _create_item(client: TestClient, headers: dict[str, str]) -> str:
@@ -119,6 +127,27 @@ def test_upload_rejects_empty_file(client: TestClient) -> None:
     assert response.json() == {
         "error": {"code": "empty_upload", "message": "Uploaded file was empty."}
     }
+
+
+def test_upload_rejects_oversized_file(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    max_bytes = 1024
+    monkeypatch.setattr("app.core.config.settings.media_max_upload_bytes", max_bytes)
+    _user_id, headers = register_and_auth(client, "upload-big@example.com")
+    response = _upload(client, headers, payload=b"x" * (max_bytes + 1))
+    assert response.status_code == 413
+    assert response.json() == UPLOAD_TOO_LARGE_ERROR
+
+
+def test_upload_accepts_file_at_size_limit(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    max_bytes = 1024
+    monkeypatch.setattr("app.core.config.settings.media_max_upload_bytes", max_bytes)
+    _user_id, headers = register_and_auth(client, "upload-limit@example.com")
+    response = _upload(client, headers, payload=b"x" * max_bytes)
+    assert response.status_code == 200
 
 
 def test_upload_persists_metadata_and_bytes_in_storage(client: TestClient) -> None:

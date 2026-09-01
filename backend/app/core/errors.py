@@ -51,6 +51,10 @@ class EmptyMediaUploadError(Exception):
     pass
 
 
+class MediaUploadTooLargeError(Exception):
+    pass
+
+
 class MediaDeletionIncompleteError(Exception):
     pass
 
@@ -144,6 +148,18 @@ async def empty_media_upload_handler(
     return JSONResponse(
         status_code=400,
         content=error_body("empty_upload", "Uploaded file was empty."),
+    )
+
+
+async def media_upload_too_large_handler(
+    _request: Request, _exc: MediaUploadTooLargeError
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=413,
+        content=error_body(
+            "upload_too_large",
+            "Uploaded file exceeds the maximum allowed size.",
+        ),
     )
 
 

@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, File, Form, UploadFile
+from fastapi import APIRouter, Depends, File, Form, Request, UploadFile
 from sqlalchemy.orm import Session
 
 from app.auth.deps import get_current_user
@@ -35,13 +35,14 @@ def create_asset(
 
 @router.post("/upload", response_model=MediaAssetResponse)
 async def upload_asset(
+    request: Request,
     file: UploadFile = File(...),
     wardrobe_item_id: UUID | None = Form(None),
     session: Session = Depends(get_db),
     storage: StoragePort = Depends(get_storage),
     user: User = Depends(get_current_user),
 ) -> MediaAssetResponse:
-    return await upload_media_asset(file, wardrobe_item_id, session, storage, user)
+    return await upload_media_asset(file, wardrobe_item_id, session, storage, user, request)
 
 
 @router.get("/{asset_id}/access", response_model=MediaAssetAccessResponse)

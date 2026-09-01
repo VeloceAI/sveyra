@@ -10,6 +10,7 @@ from app.core.errors import (
     InvalidTokenError,
     MediaAssetNotFoundError,
     MediaDeletionIncompleteError,
+    MediaUploadTooLargeError,
     OutfitNotFoundError,
     ProfileNotFoundError,
     UnauthorizedError,
@@ -24,6 +25,7 @@ from app.core.errors import (
     invalid_token_handler,
     media_asset_not_found_handler,
     media_deletion_incomplete_handler,
+    media_upload_too_large_handler,
     not_found_handler,
     outfit_not_found_handler,
     profile_not_found_handler,
@@ -74,6 +76,7 @@ def create_app(
     app.add_exception_handler(MediaAssetNotFoundError, media_asset_not_found_handler)
     app.add_exception_handler(OutfitNotFoundError, outfit_not_found_handler)
     app.add_exception_handler(EmptyMediaUploadError, empty_media_upload_handler)
+    app.add_exception_handler(MediaUploadTooLargeError, media_upload_too_large_handler)
     app.add_exception_handler(StorageUnavailableError, storage_unavailable_handler)
     app.add_exception_handler(MediaDeletionIncompleteError, media_deletion_incomplete_handler)
     app.add_exception_handler(UnauthorizedError, unauthorized_handler)

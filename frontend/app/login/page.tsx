@@ -7,6 +7,7 @@ import { login } from "@/lib/api";
 import { formatApiError } from "@/lib/api/client";
 import { setSession, userIdFromAccessToken } from "@/lib/auth/session";
 import { ErrorBanner } from "@/components/ErrorBanner";
+import { sanitizeLoginRedirect } from "./sanitize-login-redirect";
 
 function LoginForm() {
   const router = useRouter();
@@ -25,8 +26,7 @@ function LoginForm() {
       const userId = userIdFromAccessToken(token.access_token);
       if (!userId) throw new Error("Login succeeded but token subject was missing.");
       setSession(token.access_token, userId);
-      const next = params.get("next") || "/wardrobe";
-      router.replace(next.startsWith("/") ? next : "/wardrobe");
+      router.replace(sanitizeLoginRedirect(params.get("next")));
     } catch (err) {
       setError(formatApiError(err));
     } finally {
