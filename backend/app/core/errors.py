@@ -59,6 +59,14 @@ class MediaDeletionIncompleteError(Exception):
     pass
 
 
+class MediaReferenceAlreadyClaimedError(Exception):
+    pass
+
+
+class RateLimitExceededError(Exception):
+    pass
+
+
 class UnauthorizedError(Exception):
     pass
 
@@ -171,6 +179,30 @@ async def storage_unavailable_handler(
         content=error_body(
             "storage_unavailable",
             "Media storage is temporarily unavailable.",
+        ),
+    )
+
+
+async def rate_limit_exceeded_handler(
+    _request: Request, _exc: RateLimitExceededError
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=429,
+        content=error_body(
+            "rate_limit_exceeded",
+            "Too many requests. Wait a moment and try again.",
+        ),
+    )
+
+
+async def media_reference_already_claimed_handler(
+    _request: Request, _exc: MediaReferenceAlreadyClaimedError
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=409,
+        content=error_body(
+            "media_reference_already_claimed",
+            "That media reference is already registered.",
         ),
     )
 

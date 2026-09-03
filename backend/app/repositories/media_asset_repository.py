@@ -31,6 +31,11 @@ class MediaAssetRepository:
         session.add(asset)
         return asset
 
+    def get_asset_by_reference(self, session: Session, reference: str) -> MediaAsset | None:
+        return session.scalars(
+            select(MediaAsset).where(MediaAsset.reference == reference)
+        ).first()
+
     def get_asset_by_id(self, session: Session, asset_id: UUID) -> MediaAsset | None:
         return session.get(MediaAsset, asset_id)
 

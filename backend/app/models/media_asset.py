@@ -18,6 +18,8 @@ class MediaAsset(Base):
         ForeignKey("wardrobe_items.id"),
         nullable=True,
     )
-    reference: Mapped[str] = mapped_column(Text(), nullable=False)
+    # Unique: a storage object belongs to exactly one asset row, so a second
+    # user cannot claim a reference they do not own.
+    reference: Mapped[str] = mapped_column(Text(), nullable=False, unique=True)
     user: Mapped[User] = relationship(back_populates="media_assets")
     wardrobe_item: Mapped[WardrobeItem | None] = relationship(back_populates="media_assets")

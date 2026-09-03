@@ -8,6 +8,7 @@ from app.core.errors import (
     EmptyMediaUploadError,
     MediaAssetNotFoundError,
     MediaDeletionIncompleteError,
+    MediaReferenceAlreadyClaimedError,
     UserNotFoundError,
     WardrobeItemNotFoundError,
 )
@@ -41,6 +42,10 @@ class MediaAssetService:
             item = self.repository.get_wardrobe_item_by_id(session, payload.wardrobe_item_id)
             if item is None or item.user_id != user_id:
                 raise WardrobeItemNotFoundError
+        # Without this a caller could register someone else's storage reference and
+        # then read or delete the bytes behind it through their own asset row.
+        if self.repository.get_asset_by_reference(session, payload.reference) is not None:
+            raise MediaReferenceAlreadyClaimedError
         asset = self.repository.create_asset(
             session,
             user_id,
