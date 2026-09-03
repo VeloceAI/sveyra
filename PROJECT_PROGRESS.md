@@ -27,7 +27,7 @@ Users can register and log in. Protected product APIs use Bearer access tokens. 
 
 ### 3. PostgreSQL and Alembic schema
 
-Product data is persisted in PostgreSQL. Schema evolution is owned by Alembic. Current revisions run through `0006_user_password_hash` and cover users, style profiles, body profiles, wardrobe items, media assets, outfits, and password hashes.
+Product data is persisted in PostgreSQL. Schema evolution is owned by Alembic. Current revisions run through `0007_media_asset_reference_unique` and cover users, style profiles, body profiles, wardrobe items, media assets, outfits, password hashes, and a uniqueness constraint on media references.
 
 ### 4. Strict API contracts and validation
 
@@ -40,7 +40,7 @@ Image bytes are stored outside PostgreSQL. The API uses a provider-neutral `Stor
 - an in-memory adapter for local/tests
 - a Google Cloud Storage adapter for production-style object storage
 
-Supported media flows include upload, metadata retrieval, short-lived access URL generation, and deletion with storage-first retry-friendly semantics. Opaque storage references are persisted; signed URLs and raw bytes are not stored as product data.
+Supported media flows include upload, metadata retrieval, short-lived access URL generation, and deletion with storage-first retry-friendly semantics. Opaque storage references are persisted; signed URLs and raw bytes are not stored as product data. A storage reference maps to exactly one asset row, so a caller cannot register a reference another user already owns.
 
 ### 6. Profile, body, and fit data
 
@@ -63,7 +63,7 @@ Authenticated users can create, list, and fetch wardrobe items they own. Cross-u
 
 ### 10. Wardrobe gap analysis
 
-`POST /v1/recommendations/gaps` is authenticated. Identity comes from the JWT subject. The service inspects only the caller's wardrobe metadata and reports missing primary coverage buckets (`top`, `bottom`, `shoes`). Results are ephemeral. An empty wardrobe still returns HTTP 200 with all three buckets as gaps. Image bytes, computer vision, and LLM ranking are not used.
+`POST /v1/recommendations/gaps` is authenticated. Identity comes from the JWT subject. The service inspects only the caller's wardrobe metadata and reports missing primary coverage buckets (`top`, `bottom`, `shoes`). Category vocabulary lives in `app/services/category_taxonomy.py`; a one-piece garment such as a dress covers both halves, and outerwear is tracked apart from tops. Results are ephemeral. An empty wardrobe still returns HTTP 200 with all three buckets as gaps. Image bytes, computer vision, and LLM ranking are not used.
 
 ### 11. Shopping recommendations through ShoppingPort
 
@@ -93,7 +93,7 @@ Android and iOS are not implemented in this repository yet. The current API cont
 ## Major capabilities present now
 
 - JWT authentication and ownership enforcement
-- PostgreSQL persistence with Alembic migrations through `0006_user_password_hash`
+- PostgreSQL persistence with Alembic migrations through `0007_media_asset_reference_unique`
 - Strict request validation and safe error envelopes
 - Wardrobe CRUD with ownership checks
 - Media upload, access URL, and delete flows
@@ -104,7 +104,11 @@ Android and iOS are not implemented in this repository yet. The current API cont
 - Shopping recommendations at `POST /v1/recommendations/shopping` behind `ShoppingPort` (`StubShopping` mock catalog)
 - Style profile and body/fit persistence
 - Next.js authenticated web client for the core product flow (no dedicated gap or shopping UI yet)
+- Rate limiting on register and login, configurable through `AUTH_RATE_LIMIT_*`
+- `AvatarPort` seam for avatar rendering (stub default, selected by `AVATAR_BACKEND`)
+- Shared garment category taxonomy behind recommendations and gap analysis
 - Automated backend test suite covering the implemented API behavior
+- GitHub Actions CI running backend lint and tests, a migration-head check, and frontend lint, typecheck, tests and build
 
 ## Current status
 
@@ -114,8 +118,10 @@ authenticate → manage profile and wardrobe → upload media → enrich garment
 
 Verification confirmed from the repository at the time of this report:
 
-- Backend: `193 passed` from `python -m pytest -q` in `backend/`
-- Alembic head: `0006_user_password_hash` (no new migrations for gap or shopping)
+- Backend: `252 passed` from `python -m pytest -q` in `backend/`
+- Backend lint: `ruff check .` clean against the pinned `E`, `F`, `I` rule selection
+- Alembic head: `0007_media_asset_reference_unique`
+- Frontend: lint, typecheck, `6 passed` from `npm run test`, and a successful build
 - Frontend: the existing Next.js client was not extended with wardrobe-gap or shopping screens in this work
 
 Production CV providers, LLM stylists, live commerce providers, checkout/cart, Redis-backed workers, avatar/try-on, dedicated gap/shopping web screens, and native mobile apps are not claimed as complete.
@@ -141,3 +147,5 @@ The foundation and core API product flow are in place. Future work can expand wi
 - `frontend/README.md`
 - `database/alembic/versions/`
 - `.env.example` and `frontend/.env.example` (non-secret configuration only)
+- `docs/DEVELOPMENT_LOG.md` (dated record of what changed and why)
+- `.github/workflows/ci.yml`
