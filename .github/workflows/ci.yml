@@ -57,6 +57,34 @@ jobs:
           echo "heads: $heads"
           test "$heads" -eq 1
 
+  human-engine:
+    name: Human Engine
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: human-engine
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: human-engine/pyproject.toml
+
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+
+      - name: Lint
+        run: ruff check .
+
+      - name: Test
+        run: pytest -q
+
+      - name: Build a human
+        # Proves the CLI path end to end, not just the library.
+        run: python -m sveyra_human.cli build-parametric --height 184 --out /tmp/ci.glb
+
   frontend:
     name: Frontend
     runs-on: ubuntu-latest
