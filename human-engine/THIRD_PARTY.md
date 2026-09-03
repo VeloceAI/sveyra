@@ -10,6 +10,8 @@ licence is a requirement, not a preference.
 | --- | --- | --- | --- | --- | --- |
 | numpy | >=2.0 | BSD-3-Clause | https://github.com/numpy/numpy | Yes | Array maths, geometry |
 | pygltflib | >=1.16 | MIT | https://gitlab.com/dodgyville/pygltflib | Yes | glTF/GLB serialisation |
+| scipy | >=1.14 | BSD-3-Clause | https://github.com/scipy/scipy | Yes | Least-squares fitting, morphology |
+| pillow | >=10.0 | MIT-CMU | https://github.com/python-pillow/Pillow | Yes | Decoding photograph files |
 
 ## Planned, not yet introduced (Phase 2+)
 
@@ -17,7 +19,6 @@ licence is a requirement, not a preference.
 | --- | --- | --- | --- |
 | mediapipe | Apache-2.0 | Yes | Pose and face landmarks |
 | opencv-python-headless | Apache-2.0 | Yes | Image processing |
-| scipy | BSD-3-Clause | Yes | Optimisation (L-BFGS-B, least_squares) |
 
 ## Explicitly rejected
 

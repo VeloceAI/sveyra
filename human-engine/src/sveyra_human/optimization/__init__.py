@@ -1,4 +1,18 @@
-"""Silhouette and landmark fitting. Phase 3.
+from sveyra_human.optimization.objective import (
+    AnatomicalPrior,
+    ObjectiveTerm,
+    ProportionPrior,
+    SmoothnessTerm,
+    default_terms,
+)
+from sveyra_human.optimization.optimizer import FitResult, fit_body_parameters
 
-Not implemented. See docs/STATUS.md for what actually works today.
-"""
+__all__ = [
+    "AnatomicalPrior",
+    "FitResult",
+    "ObjectiveTerm",
+    "ProportionPrior",
+    "SmoothnessTerm",
+    "default_terms",
+    "fit_body_parameters",
+]

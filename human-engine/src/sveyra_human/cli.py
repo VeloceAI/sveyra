@@ -50,6 +50,18 @@ def _build_parser() -> argparse.ArgumentParser:
     build.add_argument("--quality", choices=sorted(SUBDIVISIONS), default="balanced")
     build.add_argument("--json", action="store_true", help="print metadata as JSON")
 
+    photo = sub.add_parser(
+        "build-from-photos",
+        help="Build a GLB human from photographs.",
+    )
+    photo.add_argument("--front", type=Path, required=True)
+    photo.add_argument("--side", type=Path, default=None)
+    photo.add_argument("--back", type=Path, default=None)
+    photo.add_argument("--height", type=float, required=True, help="standing height in cm")
+    photo.add_argument("--out", type=Path, default=Path("avatar.glb"))
+    photo.add_argument("--quality", choices=sorted(SUBDIVISIONS), default="balanced")
+    photo.add_argument("--json", action="store_true")
+
     sub.add_parser("info", help="show what this build of the engine can do")
     return parser
 
@@ -82,10 +94,41 @@ def _run_build(args: argparse.Namespace) -> int:
     return 0
 
 
+def _run_photo_build(args: argparse.Namespace) -> int:
+    from sveyra_human.api.errors import SveyraHumanError
+
+    engine = SveyraHumanEngine(quality_mode=args.quality)
+    try:
+        artifact = engine.build(
+            front=args.front,
+            side=args.side,
+            back=args.back,
+            height_cm=args.height,
+        )
+    except SveyraHumanError as error:
+        print(f"could not build an avatar: {error}", file=sys.stderr)
+        return 1
+
+    path = artifact.export(args.out)
+    if args.json:
+        print(artifact.to_json())
+        return 0
+
+    print(f"wrote {path}")
+    print(f"  views used   {artifact.source_views}")
+    print(f"  confidence   {artifact.quality.overall}")
+    print("  measurements " + json.dumps(artifact.measurements))
+    print(f"  total        {artifact.profiling_ms.get('total_ms', 0.0)} ms")
+    for warning in artifact.quality.warnings:
+        print(f"  note: {warning}")
+    return 0
+
+
 def _run_info() -> int:
     print("SVEYRA Human Engine 0.1.0")
-    print("  working:  parametric skeleton, cross sections, cage, surface, GLB export")
-    print("  missing:  vision, camera, fitting, face, texture, hair, rig, providers")
+    print("  working:  parametric body, silhouette fitting, photo segmentation,")
+    print("            skinned rig, collision proxies, GLB export")
+    print("  missing:  face fitting, texturing, hair, try-on providers")
     print("  see docs/STATUS.md")
     return 0
 
@@ -94,6 +137,8 @@ def main(argv: list[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
     if args.command == "build-parametric":
         return _run_build(args)
+    if args.command == "build-from-photos":
+        return _run_photo_build(args)
     return _run_info()
 
 

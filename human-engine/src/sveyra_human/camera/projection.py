@@ -129,9 +129,78 @@ def mask_iou(a: np.ndarray, b: np.ndarray) -> float:
 
 
 def mask_width_profile(mask: np.ndarray) -> np.ndarray:
-    """Filled width per image row, in pixels.
-
-    This is the measurement a silhouette actually carries: how wide the body is
-    at each height. Phase 3 compares these profiles rather than raw pixels.
-    """
+    """Filled pixel count per image row."""
     return mask.sum(axis=1).astype(np.float64)
+
+
+def mask_extent_profile(mask: np.ndarray) -> np.ndarray:
+    """Outer width per image row: rightmost filled pixel minus leftmost.
+
+    This is what a silhouette actually measures - how wide the body is at each
+    height - and unlike a filled count it ignores holes, so the gap between the
+    legs does not read as a narrower body.
+    """
+    any_filled = mask.any(axis=1)
+    idx = np.arange(mask.shape[1])
+    # Sentinels rather than NaN: empty rows are ordinary here, not an error, and
+    # nanmin on an all-empty row warns.
+    left = np.where(mask, idx[None, :], mask.shape[1]).min(axis=1)
+    right = np.where(mask, idx[None, :], -1).max(axis=1)
+    return np.where(any_filled, right - left + 1.0, 0.0).astype(np.float64)
+
+
+def projected_extent_profile(
+    vertices: np.ndarray,
+    faces: np.ndarray,
+    camera: OrthographicCamera,
+    bands: int,
+    samples_per_band: int = 3,
+) -> np.ndarray:
+    """Body width per height band, in centimetres, without rasterising.
+
+    The fitting loop evaluates this on every objective call, so it must be cheap.
+    It measures where the surface *crosses* each band height, by interpolating
+    along the mesh edges that straddle it. Binning vertices instead is faster
+    still but wrong: mesh rings sit at discrete heights, so bands between rings
+    come back empty and the widest point between two rings is missed entirely.
+
+    Each band is sampled at several heights and the widest is kept. A single
+    centre sample makes the profile jump wherever a thin feature like an
+    outstretched arm falls between samples, which turns a smooth residual into a
+    step and stalls the optimiser.
+
+    Bands run bottom to top across the projected body.
+    """
+    if bands < 2:
+        raise ValueError("bands must be at least 2")
+    if samples_per_band < 1:
+        raise ValueError("samples_per_band must be at least 1")
+    projected = camera.project(vertices)
+    x, y = projected[:, 0], projected[:, 1]
+
+    top, bottom = y.min(), y.max()
+    if bottom - top < 1e-9:
+        return np.zeros(bands)
+
+    edges = np.vstack([faces[:, [0, 1]], faces[:, [1, 2]], faces[:, [2, 0]]])
+    y0, y1 = y[edges[:, 0]], y[edges[:, 1]]
+    x0, x1 = x[edges[:, 0]], x[edges[:, 1]]
+    dy = y1 - y0
+
+    widths = np.zeros(bands)
+    # Image Y grows downward, so band 0 (the feet) sits at the largest row value.
+    offsets = (np.arange(samples_per_band) + 0.5) / samples_per_band
+    for b in range(bands):
+        widest = 0.0
+        for offset in offsets:
+            yc = bottom - (b + offset) / bands * (bottom - top)
+            straddles = (y0 <= yc) != (y1 <= yc)
+            if not straddles.any():
+                continue
+            sdy = dy[straddles]
+            safe = np.where(np.abs(sdy) < 1e-12, 1e-12, sdy)
+            t = (yc - y0[straddles]) / safe
+            crossings = x0[straddles] + t * (x1[straddles] - x0[straddles])
+            widest = max(widest, float(crossings.max() - crossings.min()))
+        widths[b] = widest
+    return widths / camera.pixels_per_cm

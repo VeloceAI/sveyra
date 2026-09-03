@@ -6,11 +6,13 @@ requires-python = ">=3.12"
 dependencies = [
     "numpy>=2.0",
     "pygltflib>=1.16",
+    "scipy>=1.14",
+    "pillow>=10.0",
 ]
 
 [project.optional-dependencies]
 # Phase 2 onward. Deliberately not required to build a parametric human.
-vision = ["mediapipe>=0.10", "opencv-python-headless>=4.10", "scipy>=1.14"]
+vision = ["mediapipe>=0.10", "opencv-python-headless>=4.10"]
 dev = ["pytest>=8.0", "ruff>=0.16"]
 
 [project.scripts]

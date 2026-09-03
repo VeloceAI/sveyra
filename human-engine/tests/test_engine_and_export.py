@@ -73,12 +73,22 @@ def test_higher_quality_means_a_denser_mesh() -> None:
 # -- honesty about what is not built yet ---------------------------------
 
 
-def test_photo_build_refuses_rather_than_faking_success(engine: SveyraHumanEngine) -> None:
-    with pytest.raises(NotImplementedYetError):
-        engine.build(front="a.jpg", side="b.jpg", height_cm=180)
+def test_photo_build_requires_a_height_to_scale_by(engine: SveyraHumanEngine) -> None:
+    """build() works now, but height is what turns pixels into centimetres."""
+    with pytest.raises(ValueError):
+        engine.build(front=np.zeros((300, 200, 3), dtype=np.uint8))
 
 
-@pytest.mark.parametrize("stage", ["fit_face", "generate_texture", "build_hair"])
+def test_photo_build_refuses_an_unsegmentable_image(engine: SveyraHumanEngine) -> None:
+    """A flat frame contains no person, and must not yield a neutral body."""
+    from sveyra_human.api.errors import ReconstructionError
+
+    flat = np.full((400, 250, 3), 200, dtype=np.uint8)
+    with pytest.raises(ReconstructionError):
+        engine.build(front=flat, height_cm=180.0)
+
+
+@pytest.mark.parametrize("stage", ["fit_face", "build_hair"])
 def test_unbuilt_stages_say_so(engine: SveyraHumanEngine, stage: str) -> None:
     with pytest.raises(NotImplementedYetError):
         getattr(engine, stage)()
@@ -178,8 +188,13 @@ def test_mock_provider_is_deterministic() -> None:
     assert provider.name == "mock"
 
 
-def test_vertex_provider_is_declared_but_not_built() -> None:
-    with pytest.raises(NotImplementedYetError):
+def test_vertex_provider_refuses_without_configuration() -> None:
+    """Implemented now, but it must not invent credentials it was never given."""
+    import os
+
+    for key in ("VERTEX_PROJECT_ID", "VERTEX_TRYON_MODEL"):
+        os.environ.pop(key, None)
+    with pytest.raises(ValueError, match="VERTEX_"):
         VertexTryOnProvider().generate("p", "g")
 
 

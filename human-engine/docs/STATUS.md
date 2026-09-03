@@ -3,7 +3,7 @@
 What actually runs today, and what is only a designed interface. Nothing in the
 "works" column is mocked; nothing in the "not built" column pretends to succeed.
 
-Last verified 2026-09-04 against 65 passing tests and 1 expected failure.
+Last verified 2026-09-04 against 171 passing tests.
 
 ## Works
 
@@ -20,7 +20,21 @@ Last verified 2026-09-04 against 65 passing tests and 1 expected failure.
 | Orthographic camera | `camera/projection.py` | Framed from known height. Front, side and back views. |
 | Silhouette rasteriser | `camera/projection.py` | Barycentric fill, plus IoU and width profiles. |
 | Synthetic harness | `tests/test_synthetic_recovery.py` | Ground-truth silhouettes from known parameters. |
-| Provider seam | `providers/` | Protocol plus a deterministic mock. Core cannot import a provider; a test enforces it. |
+| **Body fitting** | `optimization/` | Silhouettes to `BodyParameters`. Analytic init then least squares under priors. ~0.7 s. |
+| Objective terms | `optimization/objective.py` | Proportion, anatomical and smoothness priors, separately weightable. |
+| **Person segmentation** | `vision/segmentation.py` | Border-sampled background subtraction. No model, no GPU. IoU >0.95 on plain backgrounds. |
+| Capture validation | `capture/validator.py` | Rejects cropped, tiny or unsegmentable views instead of fitting them. |
+| Image loading | `capture/image_normalizer.py` | Paths, bytes or arrays. No cloud client. |
+| **Photo to avatar** | `engine.build()` | Photographs in, fitted avatar out, end to end. |
+| **Skin weights** | `rig/weights.py` | Distance-to-bone falloff, 4 influences per vertex, validated to sum to 1. |
+| **Skinned GLB** | `export/skinned_gltf.py` | Joint hierarchy, inverse bind matrices, JOINTS_0/WEIGHTS_0. Poses in a viewer. |
+| Dual quaternion skinning | `rig/dqs.py` | CPU posing for measurement. Sign-aligned blending, volume preserving. |
+| Collision proxies | `physics/collision_body.py` | 10 capsules with signed distance. Cloth collides with these, not 6,000 triangles. |
+| Garment contract | `garment/body_adapter.py` | `SveyraBody` satisfies the runtime-checkable protocol. |
+| **UV unwrapping** | `texture/uv.py` | Ring stacks unroll to atlas strips, carried through subdivision. |
+| **Projective texturing** | `texture/projection.py` | The person's own photographs painted onto the surface, blended by facing angle. |
+| Textured GLB | `export/skinned_gltf.py` | Embedded PNG, TEXCOORD_0, baseColorTexture. |
+| Provider seam | `providers/` | Protocol, deterministic mock, and a Vertex provider. Chosen by `TRYON_PROVIDER`. Core cannot import one; a test enforces it. |
 | Garment interface | `garment/interfaces.py` | Collision body, measurements, skeleton, mesh, pose. |
 | Collision primitives | `body/anatomy.py` | 14 capsules for cloth to collide against. |
 | CLI | `cli.py` | `sveyra build-parametric --height 184 --out person.glb` |
@@ -28,9 +42,19 @@ Last verified 2026-09-04 against 65 passing tests and 1 expected failure.
 
 ### Measured
 
-A 184 cm body at balanced quality: **3,528 vertices, 6,768 triangles, ~19 ms**
-on an ordinary laptop CPU, no GPU. The 5-20 s production target has a lot of
-headroom, because fitting is not in this number yet.
+| | |
+| --- | --- |
+| Forward build, 184 cm, balanced | 3,528 vertices, 6,768 triangles, ~19 ms |
+| Silhouette fit, 2 views | ~0.7 s, 13-15 objective evaluations, residual ~0.4 cm |
+| Photograph to avatar, 2 views | ~0.9 s including segmentation |
+| Skinning 3,528 vertices to 18 bones | ~20 ms |
+| Rigged GLB | 255 KB, 18 joints |
+| Photo to textured rigged avatar | ~3.1 s for 3 views, 625 KB GLB |
+| Texture coverage | ~79% painted from photographs, remainder inferred |
+| Segmentation quality | IoU 0.995 against ground truth on a lit, noisy wall |
+| Fit accuracy, torso widths | within 10% across five body types; typically 1-4% |
+
+Both on an ordinary laptop CPU with no GPU, inside the 5-20 s production target.
 
 Verified properties:
 
@@ -39,6 +63,9 @@ Verified properties:
 - Identical parameters produce byte-identical geometry.
 - A body rebuilt from `body_parameters.json` alone is identical to the original.
 - Waist, hip and chest parameters each move their own measurement.
+- Known parameters are recovered from synthetic silhouettes to within 10%.
+- Two different bodies do not fit to the same answer.
+- Turning the silhouette off makes the fit worse, so the pixels are genuinely used.
 
 ## Not built
 
@@ -47,15 +74,14 @@ something plausible.
 
 | Phase | Capability | Blocking note |
 | --- | --- | --- |
-| 2 | Pose, segmentation, face landmarks | Interfaces defined; MediaPipe is an optional extra, not yet wired. |
+| 2 | Pose landmarks | MediaPipe adapter written but untested here; fitting does not need pose. |
 | 2 | Camera calibration from a photo | Orthographic assumes an upright, centred subject. |
-| 3 | **Body fitting from silhouettes** | The core research milestone. Acceptance test already written and failing. |
+| 3 | Fitting shoulder width and limb girths | Only the six torso width/depth parameters are solved; arms obscure the shoulder band. |
 | 3 | Canonical base mesh + cage deformation | Topology is currently generated, not authored. Blocks garment transfer and morph targets. |
 | 4 | Face fitting | |
-| 5 | Projective texturing | Until this lands the avatar cannot resemble a specific person. |
 | 6 | Hair volumes | |
-| 7 | Skinning, corrective shapes, soft tissue | Skeleton and mesh exist but are not bound. |
-| 8 | Vertex try-on provider | Config reads env correctly; transport raises. |
+| 7 | Corrective shapes and soft tissue | Skinning works; joints have no corrective morphs, so extreme bends will pinch. |
+| 8 | Vertex against the live service | Transport, encoding and response handling are written and tested against a fake. Never run against real Vertex: needs a GCP project. |
 
 ## Honest limitations of what does work
 
@@ -74,6 +100,38 @@ something plausible.
 - **Arms attach by overlap.** The shoulder joint is placed just inside the torso
   surface so the limb reads as connected in a silhouette. It is an intersection,
   not a welded seam, and a deltoid shape would be the proper fix.
+- **Fitting solves six parameters, not the whole body.** Torso widths and depths
+  only. A front view in the rest pose has arms across the shoulder band, so
+  shoulder width is not recoverable from it; limb girths are not solved at all.
+- **Fitting assumes the subject is bare or close-fitting.** Nothing separates
+  clothing from body, so loose garments read as a larger waist.
+- **Segmentation assumes a plain-ish background.** It estimates the wall from the
+  frame border and keeps what differs. A busy room, a subject the colour of the
+  wall, or someone standing against a doorway will defeat it. It reports low
+  confidence rather than failing silently, and MediaPipe can be injected for
+  harder images.
+- **No pose is used.** The fit works from silhouettes alone, so a rotated or
+  non-standing subject is not detected and will fit badly.
+- **Skin weights are distance-based, not painted.** There is nothing to paint
+  onto: the mesh is generated, so a painted map would not survive a change in
+  cage resolution. Good for the rest pose and moderate articulation; shoulders
+  and hips will pinch under extreme rotation because there are no corrective
+  shapes yet.
+- **Only the rest pose exists.** `get_pose()` reports `posed: false` rather than
+  implying animation is supported.
+- **The UV seam is not solved.** Rings unwrap with `endpoint=False`, so texels
+  past the last column are filled from neighbours rather than painted. Fixing it
+  means duplicating the seam column, which changes vertex count and ripples into
+  skin weights. Deferred deliberately; visible only at high texture resolution.
+- **About a fifth of the texture is inferred**, not observed. No camera sees
+  under an arm or the inside of a thigh, so those texels are grown from the
+  nearest observed colour. `TextureSet.coverage` records exactly where.
+- **Texturing is the slowest stage** at roughly 1.8 s, because it rasterises
+  each triangle in Python. It is well inside the 5-20 s target but is the first
+  place to look if that changes.
+- **Band sampling takes the widest row per band**, which slightly over-reads
+  narrow regions. 64 bands keeps that under a centimetre; coarser banding
+  over-estimated the waist by about 10%.
 
 ## Running it
 
