@@ -17,3 +17,6 @@ htmlcov/
 *-sa.json
 *service-account*.json
 gcp-credentials.json
+
+# Python editable-install metadata
+*.egg-info/
