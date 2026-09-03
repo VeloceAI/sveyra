@@ -136,17 +136,14 @@ def test_the_harness_is_deterministic() -> None:
 # -- the Phase 3 target --------------------------------------------------
 
 
-@pytest.mark.xfail(
-    reason="Phase 3 not implemented: no fitter exists to recover parameters yet.",
-    strict=True,
-)
 def test_a_fitter_recovers_the_parameters_it_was_given() -> None:
     """The acceptance test for Phase 3.
 
-    It fails on purpose today. When the optimiser lands, remove the xfail: this
-    is the definition of the fitting working, and it must not be softened.
+    Written before the optimiser existed and deliberately not softened when it
+    landed: 5 percent on each solved width is the definition of the fitting
+    working.
     """
-    from sveyra_human.optimization.optimizer import fit_body_parameters  # type: ignore
+    from sveyra_human.optimization import fit_body_parameters
 
     truth = BodyParameters(height=182.0, waist_width=34.0, hip_width=40.0, chest_width=39.0)
     views = synthetic_views(truth)

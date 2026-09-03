@@ -3,7 +3,7 @@
 What actually runs today, and what is only a designed interface. Nothing in the
 "works" column is mocked; nothing in the "not built" column pretends to succeed.
 
-Last verified 2026-09-04 against 65 passing tests and 1 expected failure.
+Last verified 2026-09-04 against 89 passing tests.
 
 ## Works
 
@@ -20,6 +20,8 @@ Last verified 2026-09-04 against 65 passing tests and 1 expected failure.
 | Orthographic camera | `camera/projection.py` | Framed from known height. Front, side and back views. |
 | Silhouette rasteriser | `camera/projection.py` | Barycentric fill, plus IoU and width profiles. |
 | Synthetic harness | `tests/test_synthetic_recovery.py` | Ground-truth silhouettes from known parameters. |
+| **Body fitting** | `optimization/` | Silhouettes to `BodyParameters`. Analytic init then least squares under priors. ~0.7 s. |
+| Objective terms | `optimization/objective.py` | Proportion, anatomical and smoothness priors, separately weightable. |
 | Provider seam | `providers/` | Protocol plus a deterministic mock. Core cannot import a provider; a test enforces it. |
 | Garment interface | `garment/interfaces.py` | Collision body, measurements, skeleton, mesh, pose. |
 | Collision primitives | `body/anatomy.py` | 14 capsules for cloth to collide against. |
@@ -28,9 +30,13 @@ Last verified 2026-09-04 against 65 passing tests and 1 expected failure.
 
 ### Measured
 
-A 184 cm body at balanced quality: **3,528 vertices, 6,768 triangles, ~19 ms**
-on an ordinary laptop CPU, no GPU. The 5-20 s production target has a lot of
-headroom, because fitting is not in this number yet.
+| | |
+| --- | --- |
+| Forward build, 184 cm, balanced | 3,528 vertices, 6,768 triangles, ~19 ms |
+| Silhouette fit, 2 views | ~0.7 s, 13-15 objective evaluations, residual ~0.4 cm |
+| Fit accuracy, torso widths | within 10% across five body types; typically 1-4% |
+
+Both on an ordinary laptop CPU with no GPU, inside the 5-20 s production target.
 
 Verified properties:
 
@@ -39,6 +45,9 @@ Verified properties:
 - Identical parameters produce byte-identical geometry.
 - A body rebuilt from `body_parameters.json` alone is identical to the original.
 - Waist, hip and chest parameters each move their own measurement.
+- Known parameters are recovered from synthetic silhouettes to within 10%.
+- Two different bodies do not fit to the same answer.
+- Turning the silhouette off makes the fit worse, so the pixels are genuinely used.
 
 ## Not built
 
@@ -49,7 +58,7 @@ something plausible.
 | --- | --- | --- |
 | 2 | Pose, segmentation, face landmarks | Interfaces defined; MediaPipe is an optional extra, not yet wired. |
 | 2 | Camera calibration from a photo | Orthographic assumes an upright, centred subject. |
-| 3 | **Body fitting from silhouettes** | The core research milestone. Acceptance test already written and failing. |
+| 3 | Fitting shoulder width and limb girths | Only the six torso width/depth parameters are solved; arms obscure the shoulder band. |
 | 3 | Canonical base mesh + cage deformation | Topology is currently generated, not authored. Blocks garment transfer and morph targets. |
 | 4 | Face fitting | |
 | 5 | Projective texturing | Until this lands the avatar cannot resemble a specific person. |
@@ -74,6 +83,14 @@ something plausible.
 - **Arms attach by overlap.** The shoulder joint is placed just inside the torso
   surface so the limb reads as connected in a silhouette. It is an intersection,
   not a welded seam, and a deltoid shape would be the proper fix.
+- **Fitting solves six parameters, not the whole body.** Torso widths and depths
+  only. A front view in the rest pose has arms across the shoulder band, so
+  shoulder width is not recoverable from it; limb girths are not solved at all.
+- **Fitting assumes the subject is bare or close-fitting.** Nothing separates
+  clothing from body, so loose garments read as a larger waist.
+- **Band sampling takes the widest row per band**, which slightly over-reads
+  narrow regions. 64 bands keeps that under a centimetre; coarser banding
+  over-estimated the waist by about 10%.
 
 ## Running it
 

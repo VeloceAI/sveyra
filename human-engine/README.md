@@ -11,9 +11,9 @@ research-only licences.
 
 ## Status
 
-Phase 1 of 9. The mathematical human works end to end: parameters in, rigged
-topology and a GLB out, on CPU, in about 19 ms. Photo-driven reconstruction
-(Phases 2-3) is not built and refuses rather than faking a result.
+Phases 1 and 3 of 9. Parameters in, rigged topology and a GLB out, and silhouettes
+in, body parameters out. All on CPU: ~19 ms to build, ~0.7 s to fit. Turning a
+photograph into a silhouette (Phase 2) is not built and refuses rather than faking it.
 
 See [docs/STATUS.md](docs/STATUS.md) for the exact line between the two.
 
@@ -74,6 +74,6 @@ a row in that table.
 .venv/Scripts/python -m pytest -q
 ```
 
-65 passing, 1 expected failure. That failure is the Phase 3 acceptance test:
-synthetic silhouettes are generated from known parameters, and a fitter must
-recover them. It is `strict=True`, so it cannot be quietly marked passing.
+89 passing, including the Phase 3 acceptance test:
+synthetic silhouettes are generated from known parameters and the fitter must
+recover them to within 5 percent.

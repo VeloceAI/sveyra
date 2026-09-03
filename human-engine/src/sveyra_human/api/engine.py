@@ -52,9 +52,49 @@ class SveyraHumanEngine:
         with self._timed("mesh"):
             return cage_to_mesh(cage, subdivisions=SUBDIVISIONS[mode])
 
+    def fit_from_silhouettes(
+        self, views: dict[str, object], height_cm: float
+    ) -> "BodyParameters":
+        """Recover body parameters from silhouette masks.
+
+        Takes masks rather than photographs: producing a mask from a photo is
+        Phase 2, and keeping that boundary explicit means the fitting can be
+        driven from synthetic data or from any segmenter.
+        """
+        from sveyra_human.optimization import fit_body_parameters
+
+        with self._timed("fitting"):
+            return fit_body_parameters(views, height_cm=height_cm)  # type: ignore[arg-type]
+
+    def build_from_silhouettes(
+        self, views: dict[str, object], height_cm: float, quality_mode: str | None = None
+    ) -> AvatarArtifact:
+        """Silhouettes to a finished avatar."""
+        self._timings = {}
+        params = self.fit_from_silhouettes(views, height_cm)
+        # build_parametric resets the timing dict, so carry the fit across it.
+        fitting_ms = self._timings.get("fitting_ms", 0.0)
+        artifact = self.build_parametric(params, quality_mode)
+        artifact.profiling_ms["fitting_ms"] = fitting_ms
+        artifact.profiling_ms["total_ms"] = round(
+            artifact.profiling_ms.get("total_ms", 0.0) + fitting_ms, 3
+        )
+        artifact.source_views = len(views)
+        artifact.quality = QualityReport(
+            overall=0.7,
+            views={str(name): 0.7 for name in views},
+            warnings=[
+                "Body fitted from silhouettes only. Depth is constrained by the "
+                "side view alone, and loose clothing is not separated from the "
+                "body, so girths may read large."
+            ],
+        )
+        return artifact
+
     def analyze_images(self, request: AvatarBuildRequest) -> None:
         raise NotImplementedYetError(
-            "Image analysis lands in Phase 2. build_parametric() works today."
+            "Image analysis lands in Phase 2. build_parametric() and "
+            "build_from_silhouettes() work today."
         )
 
     def fit_face(self, *_args: object, **_kwargs: object) -> None:
@@ -110,6 +150,6 @@ class SveyraHumanEngine:
         them and looks like it worked.
         """
         raise NotImplementedYetError(
-            "Photo-driven build needs Phases 2-3 (vision, camera, fitting). "
-            "Use build_parametric(BodyParameters(...)) today."
+            "Photo-driven build still needs Phase 2 (segmenting a photograph "
+            "into a mask). Fitting itself works: use build_from_silhouettes()."
         )
