@@ -25,7 +25,9 @@ class BodyProfileService:
         profile = self.repository.create_body_profile(
             session,
             user_id,
-            payload.measurements,
+            # exclude_none keeps unset measurements out of the stored JSON rather
+            # than writing a null for every field the caller did not send.
+            payload.measurements.model_dump(exclude_none=True),
             payload.fit_preferences,
         )
         session.commit()
