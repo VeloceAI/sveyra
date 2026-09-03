@@ -3,7 +3,7 @@
 What actually runs today, and what is only a designed interface. Nothing in the
 "works" column is mocked; nothing in the "not built" column pretends to succeed.
 
-Last verified 2026-09-04 against 156 passing tests.
+Last verified 2026-09-04 against 171 passing tests.
 
 ## Works
 
@@ -34,7 +34,7 @@ Last verified 2026-09-04 against 156 passing tests.
 | **UV unwrapping** | `texture/uv.py` | Ring stacks unroll to atlas strips, carried through subdivision. |
 | **Projective texturing** | `texture/projection.py` | The person's own photographs painted onto the surface, blended by facing angle. |
 | Textured GLB | `export/skinned_gltf.py` | Embedded PNG, TEXCOORD_0, baseColorTexture. |
-| Provider seam | `providers/` | Protocol plus a deterministic mock. Core cannot import a provider; a test enforces it. |
+| Provider seam | `providers/` | Protocol, deterministic mock, and a Vertex provider. Chosen by `TRYON_PROVIDER`. Core cannot import one; a test enforces it. |
 | Garment interface | `garment/interfaces.py` | Collision body, measurements, skeleton, mesh, pose. |
 | Collision primitives | `body/anatomy.py` | 14 capsules for cloth to collide against. |
 | CLI | `cli.py` | `sveyra build-parametric --height 184 --out person.glb` |
@@ -81,7 +81,7 @@ something plausible.
 | 4 | Face fitting | |
 | 6 | Hair volumes | |
 | 7 | Corrective shapes and soft tissue | Skinning works; joints have no corrective morphs, so extreme bends will pinch. |
-| 8 | Vertex try-on provider | Config reads env correctly; transport raises. |
+| 8 | Vertex against the live service | Transport, encoding and response handling are written and tested against a fake. Never run against real Vertex: needs a GCP project. |
 
 ## Honest limitations of what does work
 
