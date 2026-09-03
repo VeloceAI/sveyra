@@ -1,4 +1,5 @@
 from uuid import UUID
+
 from sqlalchemy.orm import Session
 
 from app.repositories.profile_repository import ProfileRepository

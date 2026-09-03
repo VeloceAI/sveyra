@@ -1,10 +1,18 @@
 from datetime import datetime
+from typing import TYPE_CHECKING
 from uuid import UUID
 
 from sqlalchemy import DateTime, Text, Uuid, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
+
+if TYPE_CHECKING:
+    from app.models.body_profile import BodyProfile
+    from app.models.media_asset import MediaAsset
+    from app.models.outfit import Outfit
+    from app.models.style_profile import StyleProfile
+    from app.models.wardrobe_item import WardrobeItem
 
 
 class User(Base):

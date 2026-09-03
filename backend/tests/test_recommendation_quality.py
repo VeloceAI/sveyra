@@ -133,7 +133,7 @@ def test_dislikes_reduce_unsuitable_recommendations(client: TestClient) -> None:
         color="yellow",
         attributes={"cv": {"pattern": "loud"}, "style": "loud"},
     )
-    trousers = _add_item(client, headers, category="trousers", color="black")
+    _add_item(client, headers, category="trousers", color="black")
 
     body = client.post(
         "/v1/recommendations",

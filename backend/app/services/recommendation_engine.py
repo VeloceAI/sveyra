@@ -182,7 +182,9 @@ def _occasion_bonus(item: WardrobeItemSignal, occasion: str) -> tuple[float, str
     return 0.0, None
 
 
-def _style_bonus(item: WardrobeItemSignal, preferences: dict[str, object]) -> tuple[float, str | None]:
+def _style_bonus(
+    item: WardrobeItemSignal, preferences: dict[str, object]
+) -> tuple[float, str | None]:
     needles = _string_needles(preferences)
     if not needles:
         return 0.0, None
@@ -197,7 +199,9 @@ def _style_bonus(item: WardrobeItemSignal, preferences: dict[str, object]) -> tu
     return 0.0, None
 
 
-def _dislike_penalty(item: WardrobeItemSignal, dislikes: dict[str, object]) -> tuple[float, str | None]:
+def _dislike_penalty(
+    item: WardrobeItemSignal, dislikes: dict[str, object]
+) -> tuple[float, str | None]:
     needles = _string_needles(dislikes)
     if not needles:
         return 0.0, None

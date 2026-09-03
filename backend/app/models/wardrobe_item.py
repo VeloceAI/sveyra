@@ -1,3 +1,4 @@
+from typing import TYPE_CHECKING
 from uuid import UUID
 
 from sqlalchemy import JSON, ForeignKey, Text, Uuid
@@ -5,6 +6,9 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
 from app.models.user import User
+
+if TYPE_CHECKING:
+    from app.models.media_asset import MediaAsset
 
 
 class WardrobeItem(Base):

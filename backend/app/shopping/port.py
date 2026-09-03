@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Literal
+
 from pydantic import BaseModel, ConfigDict
 
 
@@ -24,5 +25,8 @@ class ShoppingPort(ABC):
         categories: list[Literal["top", "bottom", "shoes"]],
         budget: dict[str, object],
     ) -> list[ShoppingProduct]:
-        """Fetch shoppable products for the given categories matching optional budget constraints."""
+        """Fetch shoppable products for the given categories.
+
+        Honours optional budget constraints.
+        """
         pass
