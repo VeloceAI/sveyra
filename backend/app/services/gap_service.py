@@ -4,15 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.repositories.wardrobe_repository import WardrobeRepository
 from app.schemas.gap_schema import GapResponse, WardrobeGap
-from app.services.recommendation_engine import BOTTOM_CATEGORIES, SHOE_CATEGORIES, TOP_CATEGORIES
-
-
-def _normalize(value: str) -> str:
-    return value.strip().lower()
-
-
-def _has_bucket(categories: list[str], bucket: frozenset[str]) -> bool:
-    return any(_normalize(c) in bucket for c in categories)
+from app.services.category_taxonomy import BOTTOM, ONEPIECE, SHOES, TOP, bucket_for
 
 
 class GapService:
@@ -23,29 +15,31 @@ class GapService:
 
     def analyze_gaps(self, session: Session, user_id: UUID) -> GapResponse:
         items = self.wardrobe_repository.list_all_items_by_user_id(session, user_id)
-        categories = [item.category for item in items]
+        buckets = {bucket_for(item.category) for item in items}
 
         gaps: list[WardrobeGap] = []
 
-        if not _has_bucket(categories, TOP_CATEGORIES):
-            gaps.append(
-                WardrobeGap(
-                    category="top",
-                    priority="high",
-                    reason="No tops available for a basic outfit.",
+        # A dress or jumpsuit already covers both halves, so neither counts as
+        # missing when the wardrobe has one.
+        if ONEPIECE not in buckets:
+            if TOP not in buckets:
+                gaps.append(
+                    WardrobeGap(
+                        category="top",
+                        priority="high",
+                        reason="No tops available for a basic outfit.",
+                    )
                 )
-            )
-
-        if not _has_bucket(categories, BOTTOM_CATEGORIES):
-            gaps.append(
-                WardrobeGap(
-                    category="bottom",
-                    priority="high",
-                    reason="No bottoms available for a basic outfit.",
+            if BOTTOM not in buckets:
+                gaps.append(
+                    WardrobeGap(
+                        category="bottom",
+                        priority="high",
+                        reason="No bottoms available for a basic outfit.",
+                    )
                 )
-            )
 
-        if not _has_bucket(categories, SHOE_CATEGORIES):
+        if SHOES not in buckets:
             gaps.append(
                 WardrobeGap(
                     category="shoes",
