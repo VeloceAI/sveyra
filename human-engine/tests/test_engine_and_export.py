@@ -188,8 +188,13 @@ def test_mock_provider_is_deterministic() -> None:
     assert provider.name == "mock"
 
 
-def test_vertex_provider_is_declared_but_not_built() -> None:
-    with pytest.raises(NotImplementedYetError):
+def test_vertex_provider_refuses_without_configuration() -> None:
+    """Implemented now, but it must not invent credentials it was never given."""
+    import os
+
+    for key in ("VERTEX_PROJECT_ID", "VERTEX_TRYON_MODEL"):
+        os.environ.pop(key, None)
+    with pytest.raises(ValueError, match="VERTEX_"):
         VertexTryOnProvider().generate("p", "g")
 
 
