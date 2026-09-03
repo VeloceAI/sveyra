@@ -3,7 +3,7 @@
 What actually runs today, and what is only a designed interface. Nothing in the
 "works" column is mocked; nothing in the "not built" column pretends to succeed.
 
-Last verified 2026-09-04 against 89 passing tests.
+Last verified 2026-09-04 against 117 passing tests.
 
 ## Works
 
@@ -22,6 +22,10 @@ Last verified 2026-09-04 against 89 passing tests.
 | Synthetic harness | `tests/test_synthetic_recovery.py` | Ground-truth silhouettes from known parameters. |
 | **Body fitting** | `optimization/` | Silhouettes to `BodyParameters`. Analytic init then least squares under priors. ~0.7 s. |
 | Objective terms | `optimization/objective.py` | Proportion, anatomical and smoothness priors, separately weightable. |
+| **Person segmentation** | `vision/segmentation.py` | Border-sampled background subtraction. No model, no GPU. IoU >0.95 on plain backgrounds. |
+| Capture validation | `capture/validator.py` | Rejects cropped, tiny or unsegmentable views instead of fitting them. |
+| Image loading | `capture/image_normalizer.py` | Paths, bytes or arrays. No cloud client. |
+| **Photo to avatar** | `engine.build()` | Photographs in, fitted avatar out, end to end. |
 | Provider seam | `providers/` | Protocol plus a deterministic mock. Core cannot import a provider; a test enforces it. |
 | Garment interface | `garment/interfaces.py` | Collision body, measurements, skeleton, mesh, pose. |
 | Collision primitives | `body/anatomy.py` | 14 capsules for cloth to collide against. |
@@ -34,6 +38,8 @@ Last verified 2026-09-04 against 89 passing tests.
 | --- | --- |
 | Forward build, 184 cm, balanced | 3,528 vertices, 6,768 triangles, ~19 ms |
 | Silhouette fit, 2 views | ~0.7 s, 13-15 objective evaluations, residual ~0.4 cm |
+| Photograph to avatar, 2 views | ~0.9 s including segmentation |
+| Segmentation quality | IoU 0.995 against ground truth on a lit, noisy wall |
 | Fit accuracy, torso widths | within 10% across five body types; typically 1-4% |
 
 Both on an ordinary laptop CPU with no GPU, inside the 5-20 s production target.
@@ -56,7 +62,7 @@ something plausible.
 
 | Phase | Capability | Blocking note |
 | --- | --- | --- |
-| 2 | Pose, segmentation, face landmarks | Interfaces defined; MediaPipe is an optional extra, not yet wired. |
+| 2 | Pose landmarks | MediaPipe adapter written but untested here; fitting does not need pose. |
 | 2 | Camera calibration from a photo | Orthographic assumes an upright, centred subject. |
 | 3 | Fitting shoulder width and limb girths | Only the six torso width/depth parameters are solved; arms obscure the shoulder band. |
 | 3 | Canonical base mesh + cage deformation | Topology is currently generated, not authored. Blocks garment transfer and morph targets. |
@@ -88,6 +94,13 @@ something plausible.
   shoulder width is not recoverable from it; limb girths are not solved at all.
 - **Fitting assumes the subject is bare or close-fitting.** Nothing separates
   clothing from body, so loose garments read as a larger waist.
+- **Segmentation assumes a plain-ish background.** It estimates the wall from the
+  frame border and keeps what differs. A busy room, a subject the colour of the
+  wall, or someone standing against a doorway will defeat it. It reports low
+  confidence rather than failing silently, and MediaPipe can be injected for
+  harder images.
+- **No pose is used.** The fit works from silhouettes alone, so a rotated or
+  non-standing subject is not detected and will fit badly.
 - **Band sampling takes the widest row per band**, which slightly over-reads
   narrow regions. 64 bands keeps that under a centimetre; coarser banding
   over-estimated the waist by about 10%.
