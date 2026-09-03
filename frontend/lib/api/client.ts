@@ -1,4 +1,4 @@
-import { clearSession, getAccessToken } from "@/lib/auth/session";
+import { clearSession, getAccessToken, getRefreshToken, setSession, userIdFromAccessToken } from "@/lib/auth/session";
 import { ApiError, type ApiErrorBody } from "@/lib/api/types";
 
 function apiBase(): string {
@@ -25,13 +25,46 @@ async function parseError(response: Response): Promise<ApiError> {
   return new ApiError(response.status, "http_error", response.statusText || "Request failed");
 }
 
-function handleUnauthorized(status: number): void {
-  if (status !== 401) return;
+function redirectToLogin(): void {
   clearSession();
   if (typeof window !== "undefined") {
     const next = encodeURIComponent(window.location.pathname + window.location.search);
     window.location.assign(`/login?next=${next}`);
   }
+}
+
+// Concurrent 401s share one refresh so a page with several in-flight requests
+// does not spend its single-use refresh token more than once.
+let inFlightRefresh: Promise<boolean> | null = null;
+
+async function refreshSession(): Promise<boolean> {
+  const refreshToken = getRefreshToken();
+  if (!refreshToken) return false;
+
+  const response = await fetch(buildUrl("/v1/auth/refresh"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ refresh_token: refreshToken }),
+  });
+  if (!response.ok) return false;
+
+  const tokens = (await response.json()) as { access_token: string; refresh_token: string };
+  const userId = userIdFromAccessToken(tokens.access_token);
+  if (!userId) return false;
+
+  setSession(tokens.access_token, userId, tokens.refresh_token);
+  return true;
+}
+
+function refreshOnce(): Promise<boolean> {
+  if (!inFlightRefresh) {
+    inFlightRefresh = refreshSession()
+      .catch(() => false)
+      .finally(() => {
+        inFlightRefresh = null;
+      });
+  }
+  return inFlightRefresh;
 }
 
 export type RequestOptions = {
@@ -41,7 +74,11 @@ export type RequestOptions = {
   headers?: Record<string, string>;
 };
 
-export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
+export async function apiRequest<T>(
+  path: string,
+  options: RequestOptions = {},
+  retryAfterRefresh = true,
+): Promise<T> {
   const headers: Record<string, string> = { ...(options.headers ?? {}) };
   const auth = options.auth !== false;
   if (auth) {
@@ -64,7 +101,12 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   });
 
   if (response.status === 401) {
-    handleUnauthorized(401);
+    // An expired access token is the common case, so try to renew it and replay
+    // the request before sending anyone back to the login screen.
+    if (auth && retryAfterRefresh && (await refreshOnce())) {
+      return apiRequest<T>(path, options, false);
+    }
+    redirectToLogin();
     throw await parseError(response);
   }
 

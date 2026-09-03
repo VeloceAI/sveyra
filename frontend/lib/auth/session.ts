@@ -1,4 +1,5 @@
 const TOKEN_KEY = "sveyra_access_token";
+const REFRESH_KEY = "sveyra_refresh_token";
 const USER_ID_KEY = "sveyra_user_id";
 
 function canUseStorage(): boolean {
@@ -15,15 +16,22 @@ export function getUserId(): string | null {
   return sessionStorage.getItem(USER_ID_KEY);
 }
 
-export function setSession(accessToken: string, userId: string): void {
+export function getRefreshToken(): string | null {
+  if (!canUseStorage()) return null;
+  return sessionStorage.getItem(REFRESH_KEY);
+}
+
+export function setSession(accessToken: string, userId: string, refreshToken?: string): void {
   if (!canUseStorage()) return;
   sessionStorage.setItem(TOKEN_KEY, accessToken);
   sessionStorage.setItem(USER_ID_KEY, userId);
+  if (refreshToken) sessionStorage.setItem(REFRESH_KEY, refreshToken);
 }
 
 export function clearSession(): void {
   if (!canUseStorage()) return;
   sessionStorage.removeItem(TOKEN_KEY);
+  sessionStorage.removeItem(REFRESH_KEY);
   sessionStorage.removeItem(USER_ID_KEY);
 }
 

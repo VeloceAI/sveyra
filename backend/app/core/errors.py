@@ -79,6 +79,10 @@ class InvalidCredentialsError(Exception):
     pass
 
 
+class InvalidRefreshTokenError(Exception):
+    pass
+
+
 class EmailAlreadyRegisteredError(Exception):
     pass
 
@@ -179,6 +183,18 @@ async def storage_unavailable_handler(
         content=error_body(
             "storage_unavailable",
             "Media storage is temporarily unavailable.",
+        ),
+    )
+
+
+async def invalid_refresh_token_handler(
+    _request: Request, _exc: InvalidRefreshTokenError
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=401,
+        content=error_body(
+            "invalid_refresh_token",
+            "The refresh token is invalid or expired. Sign in again.",
         ),
     )
 

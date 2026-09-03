@@ -24,7 +24,7 @@ export default function RegisterPage() {
       const token = await login(email.trim(), password);
       const userId = userIdFromAccessToken(token.access_token);
       if (!userId) throw new Error("Registration succeeded but token subject was missing.");
-      setSession(token.access_token, userId);
+      setSession(token.access_token, userId, token.refresh_token);
       router.replace("/profile");
     } catch (err) {
       setError(formatApiError(err));
@@ -63,7 +63,7 @@ export default function RegisterPage() {
             />
           </label>
           <button type="submit" disabled={loading}>
-            {loading ? "Creating…" : "Create account"}
+            {loading ? "Creatingâ€¦" : "Create account"}
           </button>
         </form>
         <p>

@@ -1,3 +1,5 @@
+import hashlib
+import secrets
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
@@ -27,3 +29,19 @@ def parse_access_token(token: str) -> UUID:
         return UUID(subject)
     except ValueError:
         raise InvalidTokenError
+
+
+def create_refresh_token() -> str:
+    """Opaque, high-entropy secret. Not a JWT: validity is a database lookup,
+    which is what makes revocation and rotation possible."""
+    return secrets.token_urlsafe(48)
+
+
+def hash_refresh_token(token: str) -> str:
+    # SHA-256 rather than bcrypt: the input is already 384 bits of entropy, so
+    # there is nothing for a slow KDF to protect against.
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def refresh_token_expiry() -> datetime:
+    return datetime.now(UTC) + timedelta(seconds=settings.refresh_token_ttl_seconds)

@@ -8,6 +8,47 @@ changed, why it changed, and how it was verified. Link the PR.
 
 ---
 
+## 2026-09-04 — Refresh-token sessions
+
+PR [#3](https://github.com/VeloceAI/sveyra/pull/3)
+
+Access tokens cap at one hour and there was no way to renew one, so every user
+was signed out hourly and the web client sent them to the login screen on the
+next request. That made the product hard to use and hard to dogfood.
+
+Adds `POST /v1/auth/refresh` and `POST /v1/auth/logout`. Refresh tokens are
+opaque random secrets rather than JWTs, because validity is a database lookup
+and that is what makes revocation possible. Only a SHA-256 hash is stored, so a
+leaked row cannot be replayed; the input is already 384 bits of entropy, so a
+slow KDF would protect nothing.
+
+Tokens rotate on every use. Presenting an already-rotated token revokes every
+session for that user: rotation means the only way a revoked token reappears is
+that someone kept a copy, and at that point neither holder can be trusted.
+Logout is idempotent and says nothing about whether the token existed.
+
+The web client now renews silently. A 401 triggers one refresh and replays the
+original request before any redirect happens, and concurrent 401s share a single
+in-flight refresh so a page with several requests in the air cannot spend its
+single-use token more than once. Logging out revokes server-side instead of only
+clearing browser storage.
+
+### Verification
+
+- Backend: `264 passed`, including rotation, reuse detection, expiry and logout
+- Backend lint: `ruff check .` clean
+- Alembic: single head at `0008_refresh_tokens`
+- Frontend: lint, typecheck, `6 passed`, build succeeds
+
+### Known gaps
+
+- Tokens live in `sessionStorage`, which is reachable from XSS. An httpOnly
+  cookie would be stronger, but cookies complicate the planned mobile clients,
+  which is why rotation and revocation carry the risk for now.
+- Nothing prunes expired rows from `refresh_tokens` yet.
+
+---
+
 ## 2026-09-03 — Media ownership, auth rate limiting, avatar seam, CI
 
 PR [#1](https://github.com/VeloceAI/sveyra/pull/1)
