@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     )
     jwt_secret: str = Field(default=_DEFAULT_JWT_SECRET)
     jwt_access_ttl_seconds: int = Field(default=900, gt=0, le=3600)
+    refresh_token_ttl_seconds: int = Field(default=30 * 24 * 3600, gt=0, le=365 * 24 * 3600)
     auth_rate_limit_max_requests: int = Field(default=10, gt=0, le=1000)
     auth_rate_limit_window_seconds: int = Field(default=60, gt=0, le=3600)
     avatar_backend: str = "stub"

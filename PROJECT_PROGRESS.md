@@ -25,9 +25,11 @@ Routes stay thin. Handlers adapt HTTP concerns. Services own product decisions. 
 
 Users can register and log in. Protected product APIs use Bearer access tokens. Identity comes from the authenticated user (`JWT` subject), not from client-supplied ownership fields. Passwords are stored as hashes only.
 
+Sessions outlive the access token. `POST /v1/auth/refresh` exchanges an opaque refresh token for a new pair and rotates the old one; `POST /v1/auth/logout` revokes it. Refresh tokens are stored hashed and are revocable. Replaying an already-rotated token revokes every session for that user, since the only way it can happen is that a copy was kept.
+
 ### 3. PostgreSQL and Alembic schema
 
-Product data is persisted in PostgreSQL. Schema evolution is owned by Alembic. Current revisions run through `0007_media_asset_reference_unique` and cover users, style profiles, body profiles, wardrobe items, media assets, outfits, password hashes, and a uniqueness constraint on media references.
+Product data is persisted in PostgreSQL. Schema evolution is owned by Alembic. Current revisions run through `0008_refresh_tokens` and cover users, style profiles, body profiles, wardrobe items, media assets, outfits, password hashes, and a uniqueness constraint on media references.
 
 ### 4. Strict API contracts and validation
 
@@ -84,7 +86,7 @@ A thin authenticated Next.js + React + TypeScript client consumes the same backe
 - garment enrichment
 - recommendations and saved outfits
 
-The web client does not currently expose dedicated wardrobe-gap or shopping screens. The web client uses Next.js rewrites to reach the API and stores the access token in session storage for this stage of development. There is no refresh-token flow yet.
+The web client does not currently expose dedicated wardrobe-gap or shopping screens. The web client uses Next.js rewrites to reach the API and stores tokens in session storage for this stage of development. Access tokens are short-lived and renewed silently through the refresh endpoint, so an expiring token no longer interrupts the user.
 
 ### 14. Future mobile clients
 
@@ -93,7 +95,7 @@ Android and iOS are not implemented in this repository yet. The current API cont
 ## Major capabilities present now
 
 - JWT authentication and ownership enforcement
-- PostgreSQL persistence with Alembic migrations through `0007_media_asset_reference_unique`
+- PostgreSQL persistence with Alembic migrations through `0008_refresh_tokens`
 - Strict request validation and safe error envelopes
 - Wardrobe CRUD with ownership checks
 - Media upload, access URL, and delete flows
@@ -104,6 +106,7 @@ Android and iOS are not implemented in this repository yet. The current API cont
 - Shopping recommendations at `POST /v1/recommendations/shopping` behind `ShoppingPort` (`StubShopping` mock catalog)
 - Style profile and body/fit persistence
 - Next.js authenticated web client for the core product flow (no dedicated gap or shopping UI yet)
+- Refresh-token sessions with rotation, reuse detection and revocable logout
 - Rate limiting on register and login, configurable through `AUTH_RATE_LIMIT_*`
 - `AvatarPort` seam for avatar rendering (stub default, selected by `AVATAR_BACKEND`)
 - Shared garment category taxonomy behind recommendations and gap analysis
@@ -118,9 +121,9 @@ authenticate → manage profile and wardrobe → upload media → enrich garment
 
 Verification confirmed from the repository at the time of this report:
 
-- Backend: `252 passed` from `python -m pytest -q` in `backend/`
+- Backend: `264 passed` from `python -m pytest -q` in `backend/`
 - Backend lint: `ruff check .` clean against the pinned `E`, `F`, `I` rule selection
-- Alembic head: `0007_media_asset_reference_unique`
+- Alembic head: `0008_refresh_tokens`
 - Frontend: lint, typecheck, `6 passed` from `npm run test`, and a successful build
 - Frontend: the existing Next.js client was not extended with wardrobe-gap or shopping screens in this work
 

@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { clearSession, getAccessToken } from "@/lib/auth/session";
+import { logout } from "@/lib/api";
+import { clearSession, getAccessToken, getRefreshToken } from "@/lib/auth/session";
 
 const LINKS = [
   { href: "/profile", label: "Profile" },
@@ -26,7 +27,7 @@ export function AppNav() {
   }, [pathname, router]);
 
   if (!ready) {
-    return <p className="empty">Checking session…</p>;
+    return <p className="empty">Checking sessionâ€¦</p>;
   }
 
   return (
@@ -44,7 +45,11 @@ export function AppNav() {
       <button
         type="button"
         className="secondary"
-        onClick={() => {
+        onClick={async () => {
+          const refreshToken = getRefreshToken();
+          if (refreshToken) {
+            await logout(refreshToken).catch(() => undefined);
+          }
           clearSession();
           router.replace("/login");
         }}

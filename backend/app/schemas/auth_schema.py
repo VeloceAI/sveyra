@@ -20,6 +20,11 @@ class RegisterResponse(StrictRequestModel):
     email: str
 
 
+class RefreshRequest(StrictRequestModel):
+    refresh_token: str = Field(min_length=1, max_length=512)
+
+
 class TokenResponse(StrictRequestModel):
     access_token: str
+    refresh_token: str
     token_type: str = "bearer"

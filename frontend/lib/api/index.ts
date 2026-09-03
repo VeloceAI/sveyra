@@ -34,6 +34,16 @@ export function login(email: string, password: string) {
   });
 }
 
+export async function logout(refreshToken: string) {
+  // Revoking server-side matters more than the response: a token left valid
+  // outlives the browser session that discarded it.
+  await apiRequest<void>("/v1/auth/logout", {
+    method: "POST",
+    body: { refresh_token: refreshToken },
+    auth: false,
+  });
+}
+
 export function getCurrentProfile() {
   return apiRequest<PersistedProfile>("/v1/profile");
 }

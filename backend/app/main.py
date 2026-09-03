@@ -9,6 +9,7 @@ from app.core.errors import (
     EmailAlreadyRegisteredError,
     EmptyMediaUploadError,
     InvalidCredentialsError,
+    InvalidRefreshTokenError,
     InvalidTokenError,
     MediaAssetNotFoundError,
     MediaDeletionIncompleteError,
@@ -26,6 +27,7 @@ from app.core.errors import (
     email_already_registered_handler,
     empty_media_upload_handler,
     invalid_credentials_handler,
+    invalid_refresh_token_handler,
     invalid_token_handler,
     media_asset_not_found_handler,
     media_deletion_incomplete_handler,
@@ -98,6 +100,7 @@ def create_app(
     app.add_exception_handler(UnauthorizedError, unauthorized_handler)
     app.add_exception_handler(InvalidTokenError, invalid_token_handler)
     app.add_exception_handler(InvalidCredentialsError, invalid_credentials_handler)
+    app.add_exception_handler(InvalidRefreshTokenError, invalid_refresh_token_handler)
     app.add_exception_handler(EmailAlreadyRegisteredError, email_already_registered_handler)
     app.add_exception_handler(WardrobeEmptyError, wardrobe_empty_handler)
     app.add_exception_handler(WardrobeMediaMissingError, wardrobe_media_missing_handler)

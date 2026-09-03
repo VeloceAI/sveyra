@@ -25,7 +25,7 @@ function LoginForm() {
       const token = await login(email.trim(), password);
       const userId = userIdFromAccessToken(token.access_token);
       if (!userId) throw new Error("Login succeeded but token subject was missing.");
-      setSession(token.access_token, userId);
+      setSession(token.access_token, userId, token.refresh_token);
       router.replace(sanitizeLoginRedirect(params.get("next")));
     } catch (err) {
       setError(formatApiError(err));
@@ -63,7 +63,7 @@ function LoginForm() {
             />
           </label>
           <button type="submit" disabled={loading}>
-            {loading ? "Signing in…" : "Sign in"}
+            {loading ? "Signing inâ€¦" : "Sign in"}
           </button>
         </form>
         <p>
@@ -76,7 +76,7 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<p className="empty">Loading…</p>}>
+    <Suspense fallback={<p className="empty">Loadingâ€¦</p>}>
       <LoginForm />
     </Suspense>
   );
