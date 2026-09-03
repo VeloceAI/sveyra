@@ -93,6 +93,7 @@ class AvatarArtifact:
     profiling_ms: dict[str, float] = field(default_factory=dict)
     source_views: int = 0
     _mesh: object | None = None
+    _skeleton: object | None = None
 
     def metadata(self) -> dict[str, object]:
         return {
@@ -105,17 +106,37 @@ class AvatarArtifact:
             "profiling_ms": self.profiling_ms,
         }
 
-    def export(self, path: str | Path) -> Path:
-        """Write the GLB, plus the JSON sidecars next to it."""
+    def export(self, path: str | Path, rigged: bool = True) -> Path:
+        """Write the GLB, plus the JSON sidecars next to it.
+
+        Rigged by default: an avatar that cannot be posed is of little use to a
+        try-on viewer. Pass rigged=False for a plain static mesh.
+        """
         from sveyra_human.export.gltf import export_glb
         from sveyra_human.export.metadata import write_sidecars
+        from sveyra_human.export.skinned_gltf import export_skinned_glb
 
         if self._mesh is None:
             raise RuntimeError("artifact carries no mesh")
         target = Path(path)
-        export_glb(self._mesh, target)  # type: ignore[arg-type]
+        if rigged and self._skeleton is not None:
+            export_skinned_glb(self._mesh, self._skeleton, target)  # type: ignore[arg-type]
+        else:
+            export_glb(self._mesh, target)  # type: ignore[arg-type]
         write_sidecars(self, target.parent)
         return target
+
+    def as_garment_body(self) -> object:
+        """Hand this avatar to a garment engine across the narrow contract."""
+        from sveyra_human.garment.body_adapter import SveyraBody
+
+        if self._mesh is None or self._skeleton is None:
+            raise RuntimeError("artifact carries no mesh or skeleton")
+        return SveyraBody(
+            parameters=self.body_parameters,
+            skeleton=self._skeleton,  # type: ignore[arg-type]
+            mesh=self._mesh,  # type: ignore[arg-type]
+        )
 
     def to_json(self, indent: int = 2) -> str:
         return json.dumps(self.metadata(), indent=indent)

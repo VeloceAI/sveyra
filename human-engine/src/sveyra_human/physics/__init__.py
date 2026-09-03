@@ -1,4 +1,3 @@
-"""Collision proxies and soft regions. Phase 7+.
+from sveyra_human.physics.collision_body import Capsule, CollisionBody, build_collision_body
 
-Not implemented. See docs/STATUS.md for what actually works today.
-"""
+__all__ = ["Capsule", "CollisionBody", "build_collision_body"]

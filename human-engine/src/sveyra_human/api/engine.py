@@ -178,6 +178,7 @@ class SveyraHumanEngine:
             profiling_ms=dict(self._timings),
             source_views=0,
             _mesh=mesh,
+            _skeleton=skeleton,
         )
 
     def build(

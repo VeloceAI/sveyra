@@ -6,9 +6,10 @@ whole surface it needs, so the two can be developed and versioned separately.
 
 from __future__ import annotations
 
-from typing import Protocol
+from typing import Protocol, runtime_checkable
 
 
+@runtime_checkable
 class GarmentBodyInterface(Protocol):
     def get_collision_body(self) -> list[dict[str, object]]:
         """Cheap capsules to collide against, not the visible skin mesh."""

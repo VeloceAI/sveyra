@@ -54,6 +54,8 @@
   <label><input type="checkbox" id="normals"> Normals</label>
   <label><input type="checkbox" id="grid" checked> Ground grid</label>
   <label><input type="checkbox" id="axes"> Axes</label>
+  <label><input type="checkbox" id="skeleton"> Skeleton</label>
+  <label><input type="checkbox" id="pose"> Wave (test the rig)</label>
   <label><input type="checkbox" id="spin"> Auto-rotate</label>
 
   <hr>
@@ -112,6 +114,9 @@ scene.add(axes);
 
 let current = null;
 let normalsHelper = null;
+let skeletonHelper = null;
+let skinnedMesh = null;
+let armBone = null;
 
 function frame(object) {
   const box = new THREE.Box3().setFromObject(object);
@@ -146,6 +151,7 @@ function describe(object, size) {
 function clear() {
   if (!current) return;
   scene.remove(current);
+  if (skeletonHelper) { scene.remove(skeletonHelper); skeletonHelper = null; }
   current.traverse((c) => {
     if (c.isMesh) { c.geometry.dispose(); c.material.dispose(); }
   });
@@ -159,6 +165,18 @@ function load(url) {
     clear();
     current = gltf.scene;
     scene.add(current);
+
+    skinnedMesh = null;
+    armBone = null;
+    current.traverse((c) => {
+      if (c.isSkinnedMesh && !skinnedMesh) skinnedMesh = c;
+      if (c.isBone && c.name === "upperarm_L") armBone = c;
+    });
+    if (skinnedMesh) {
+      skeletonHelper = new THREE.SkeletonHelper(current);
+      skeletonHelper.visible = document.getElementById("skeleton").checked;
+      scene.add(skeletonHelper);
+    }
     const { size } = frame(current);
     describe(current, size);
     applyToggles();
@@ -192,6 +210,9 @@ for (const id of ["wire", "normals"]) {
 document.getElementById("grid").addEventListener("change", (e) => {
   grid.visible = e.target.checked;
 });
+document.getElementById("skeleton").addEventListener("change", (e) => {
+  if (skeletonHelper) skeletonHelper.visible = e.target.checked;
+});
 document.getElementById("axes").addEventListener("change", (e) => {
   axes.visible = e.target.checked;
 });
@@ -220,8 +241,14 @@ fetch("avatar.glb", { method: "HEAD" })
   .then((r) => { if (r.ok) load("avatar.glb"); })
   .catch(() => {});
 
+// A crude arm wave, purely to prove the skin weights actually deform the mesh.
+const clock = new THREE.Clock();
 (function tick() {
   requestAnimationFrame(tick);
+  if (armBone) {
+    const on = document.getElementById("pose").checked;
+    armBone.rotation.z = on ? Math.sin(clock.getElapsedTime() * 2) * 0.6 : 0;
+  }
   controls.update();
   renderer.render(scene, camera);
 })();

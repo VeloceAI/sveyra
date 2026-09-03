@@ -7,9 +7,10 @@ change.
 
 from __future__ import annotations
 
-from typing import Protocol
+from typing import Protocol, runtime_checkable
 
 
+@runtime_checkable
 class TryOnProvider(Protocol):
     """Produces a 2D try-on image. Never a source of 3D body truth."""
 

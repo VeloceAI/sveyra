@@ -3,7 +3,7 @@
 What actually runs today, and what is only a designed interface. Nothing in the
 "works" column is mocked; nothing in the "not built" column pretends to succeed.
 
-Last verified 2026-09-04 against 117 passing tests.
+Last verified 2026-09-04 against 144 passing tests.
 
 ## Works
 
@@ -26,6 +26,11 @@ Last verified 2026-09-04 against 117 passing tests.
 | Capture validation | `capture/validator.py` | Rejects cropped, tiny or unsegmentable views instead of fitting them. |
 | Image loading | `capture/image_normalizer.py` | Paths, bytes or arrays. No cloud client. |
 | **Photo to avatar** | `engine.build()` | Photographs in, fitted avatar out, end to end. |
+| **Skin weights** | `rig/weights.py` | Distance-to-bone falloff, 4 influences per vertex, validated to sum to 1. |
+| **Skinned GLB** | `export/skinned_gltf.py` | Joint hierarchy, inverse bind matrices, JOINTS_0/WEIGHTS_0. Poses in a viewer. |
+| Dual quaternion skinning | `rig/dqs.py` | CPU posing for measurement. Sign-aligned blending, volume preserving. |
+| Collision proxies | `physics/collision_body.py` | 10 capsules with signed distance. Cloth collides with these, not 6,000 triangles. |
+| Garment contract | `garment/body_adapter.py` | `SveyraBody` satisfies the runtime-checkable protocol. |
 | Provider seam | `providers/` | Protocol plus a deterministic mock. Core cannot import a provider; a test enforces it. |
 | Garment interface | `garment/interfaces.py` | Collision body, measurements, skeleton, mesh, pose. |
 | Collision primitives | `body/anatomy.py` | 14 capsules for cloth to collide against. |
@@ -39,6 +44,8 @@ Last verified 2026-09-04 against 117 passing tests.
 | Forward build, 184 cm, balanced | 3,528 vertices, 6,768 triangles, ~19 ms |
 | Silhouette fit, 2 views | ~0.7 s, 13-15 objective evaluations, residual ~0.4 cm |
 | Photograph to avatar, 2 views | ~0.9 s including segmentation |
+| Skinning 3,528 vertices to 18 bones | ~20 ms |
+| Rigged GLB | 255 KB, 18 joints |
 | Segmentation quality | IoU 0.995 against ground truth on a lit, noisy wall |
 | Fit accuracy, torso widths | within 10% across five body types; typically 1-4% |
 
@@ -69,7 +76,7 @@ something plausible.
 | 4 | Face fitting | |
 | 5 | Projective texturing | Until this lands the avatar cannot resemble a specific person. |
 | 6 | Hair volumes | |
-| 7 | Skinning, corrective shapes, soft tissue | Skeleton and mesh exist but are not bound. |
+| 7 | Corrective shapes and soft tissue | Skinning works; joints have no corrective morphs, so extreme bends will pinch. |
 | 8 | Vertex try-on provider | Config reads env correctly; transport raises. |
 
 ## Honest limitations of what does work
@@ -101,6 +108,13 @@ something plausible.
   harder images.
 - **No pose is used.** The fit works from silhouettes alone, so a rotated or
   non-standing subject is not detected and will fit badly.
+- **Skin weights are distance-based, not painted.** There is nothing to paint
+  onto: the mesh is generated, so a painted map would not survive a change in
+  cage resolution. Good for the rest pose and moderate articulation; shoulders
+  and hips will pinch under extreme rotation because there are no corrective
+  shapes yet.
+- **Only the rest pose exists.** `get_pose()` reports `posed: false` rather than
+  implying animation is supported.
 - **Band sampling takes the widest row per band**, which slightly over-reads
   narrow regions. 64 bands keeps that under a centimetre; coarser banding
   over-estimated the waist by about 10%.

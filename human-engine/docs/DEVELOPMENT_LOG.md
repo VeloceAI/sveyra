@@ -4,6 +4,45 @@ Newest first.
 
 ---
 
+## Phase 7 - Rig, collision proxies, garment contract
+
+The avatar can now be posed, and a garment engine has something to talk to.
+
+### Weights come from geometry, not from an artist
+
+There is nothing to paint onto. The mesh is generated, so a painted weight map
+would not survive a change in cage resolution. Influence falls off with distance
+to the *bone segment* rather than to the joint point, because measuring to a
+single point makes a long bone like a thigh lose its grip halfway down. Four
+influences per vertex, which is what glTF stores and GPUs expect.
+
+Checked anatomically rather than numerically: the rightmost vertex must bind to
+a left-arm bone, the lowest to a foot. Both hold.
+
+### Dual quaternions, and the sign trap
+
+Quaternions double-cover rotations, so blending `q` with `-q` cancels to nothing
+instead of averaging. Signs are aligned to the first influence before blending.
+There is a test for exactly that, because it is silent when wrong: the mesh
+simply collapses.
+
+### Collision is separate from skin
+
+Ten capsules with signed distance, not the 6,000-triangle surface. That
+separation is what lets a cloth solver run at interactive rates, and it is why
+`GarmentBodyInterface` exposes a collision body rather than a mesh.
+
+### Verification
+
+- 144 tests pass, ruff clean
+- Exported GLB carries 18 joints, inverse bind matrices and vertex weights
+- Local translations reconstruct world joint positions to 1e-5
+- Inverse bind matrices map each joint to the origin
+- A blended half-rotation preserves length, which is the point of dual quaternions
+- The viewer waves an arm to prove the weights actually deform the mesh
+
+---
+
 ## Phase 2 - Photographs to silhouettes
 
 `engine.build()` works end to end now: photographs in, fitted avatar out, in
