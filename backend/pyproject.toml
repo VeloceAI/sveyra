@@ -5,3 +5,19 @@ testpaths = ["tests"]
 [tool.ruff]
 line-length = 100
 target-version = "py312"
+
+[tool.ruff.lint]
+# Pinned explicitly: with no selection the rule set drifts between ruff
+# versions and CI stops matching what runs locally. Ratchet toward "B"
+# and "UP" once the existing B904 exception chaining is cleaned up.
+select = ["E", "F", "I"]
+
+[tool.ruff.lint.flake8-bugbear]
+# FastAPI resolves these per request; they are not mutable shared defaults.
+extend-immutable-calls = [
+    "fastapi.Body",
+    "fastapi.Depends",
+    "fastapi.File",
+    "fastapi.Form",
+    "fastapi.Query",
+]

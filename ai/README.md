@@ -13,10 +13,13 @@ Owns AI orchestration contracts for SVEYRA.
 
 ## Contract
 
-API services should call AI through stable functions such as:
+API services should call AI through stable ports/functions such as:
 
 ```text
-generate_outfit_rationale(context)
-extract_wardrobe_attributes(image_context)
+StylistPort.recommend(RankingContext) -> ranked outfits
+VisionPort.analyze_garment(image bytes) -> GarmentAnalysis
+generate_outfit_rationale(context)   # future conversational flows
 answer_style_question(user_context, message)
 ```
+
+The backend default stylist is deterministic (`STYLIST_BACKEND=stub`). Real LLM providers remain future adapters behind `StylistPort`.

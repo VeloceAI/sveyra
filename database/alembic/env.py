@@ -1,14 +1,25 @@
 from logging.config import fileConfig
+from pathlib import Path
+import sys
 
 from alembic import context
 from sqlalchemy import engine_from_config, pool
+
+_BACKEND = Path(__file__).resolve().parents[2] / "backend"
+if str(_BACKEND) not in sys.path:
+    sys.path.insert(0, str(_BACKEND))
+
+from app.core.config import settings
+from app.db.base import Base
+from app.models import BodyProfile, MediaAsset, Outfit, StyleProfile, User, WardrobeItem  # noqa: F401
 
 config = context.config
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-target_metadata = None
+config.set_main_option("sqlalchemy.url", settings.database_url)
+target_metadata = Base.metadata
 
 
 def run_migrations_offline() -> None:

@@ -1,0 +1,2 @@
+class VisionUnavailableError(Exception):
+    pass
