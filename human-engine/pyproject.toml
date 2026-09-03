@@ -1,0 +1,35 @@
+[project]
+name = "sveyra-human-engine"
+version = "0.1.0"
+description = "Lightweight CPU-first parametric 3D human reconstruction"
+requires-python = ">=3.12"
+dependencies = [
+    "numpy>=2.0",
+    "pygltflib>=1.16",
+]
+
+[project.optional-dependencies]
+# Phase 2 onward. Deliberately not required to build a parametric human.
+vision = ["mediapipe>=0.10", "opencv-python-headless>=4.10", "scipy>=1.14"]
+dev = ["pytest>=8.0", "ruff>=0.16"]
+
+[project.scripts]
+sveyra = "sveyra_human.cli:main"
+
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
