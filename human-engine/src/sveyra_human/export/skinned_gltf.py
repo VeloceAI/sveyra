@@ -36,9 +36,13 @@ def _pad(data: bytes, alignment: int = 4) -> bytes:
 
 
 def export_skinned_glb(
-    mesh: SurfaceMesh, skeleton: Skeleton, path: str | Path, name: str = "SveyraHuman"
+    mesh: SurfaceMesh,
+    skeleton: Skeleton,
+    path: str | Path,
+    name: str = "SveyraHuman",
+    albedo: np.ndarray | None = None,
 ) -> Path:
-    """Write a rigged GLB: mesh, skeleton, and skin weights."""
+    """Write a rigged GLB: mesh, skeleton, skin weights, and optionally a texture."""
     target = Path(path)
     target.parent.mkdir(parents=True, exist_ok=True)
 
@@ -57,6 +61,7 @@ def export_skinned_glb(
     # glTF matrices are column-major.
     ibm_bytes = _pad(np.transpose(ibm, (0, 2, 1)).astype(np.float32).tobytes())
 
+    has_texture = albedo is not None and mesh.uv is not None
     chunks = [
         _pad(positions.tobytes()),
         _pad(normals.tobytes()),
@@ -65,6 +70,9 @@ def export_skinned_glb(
         _pad(skin_weights.tobytes()),
         ibm_bytes,
     ]
+    if has_texture:
+        chunks.append(_pad(mesh.uv.astype(np.float32).tobytes()))
+        chunks.append(_pad(_encode_png(albedo)))
     offsets: list[int] = []
     running = 0
     for chunk in chunks:
@@ -80,6 +88,8 @@ def export_skinned_glb(
         pygltflib.ARRAY_BUFFER,
         None,  # inverse bind matrices are not a vertex attribute
     ]
+    if has_texture:
+        targets.extend([pygltflib.ARRAY_BUFFER, None])
     buffer_views = [
         pygltflib.BufferView(
             buffer=0, byteOffset=offset, byteLength=len(chunk), target=target
@@ -122,6 +132,16 @@ def export_skinned_glb(
         ),
     ]
 
+    if has_texture:
+        accessors.append(
+            pygltflib.Accessor(
+                bufferView=6,
+                componentType=pygltflib.FLOAT,
+                count=len(mesh.uv),
+                type=pygltflib.VEC2,
+            )
+        )
+
     # Node 0 is the mesh; joints follow, so joint i is node i + 1.
     translations = local_translations(skeleton, order)
     nodes: list[pygltflib.Node] = [pygltflib.Node(mesh=0, skin=0, name=name)]
@@ -151,7 +171,11 @@ def export_skinned_glb(
                 primitives=[
                     pygltflib.Primitive(
                         attributes=pygltflib.Attributes(
-                            POSITION=0, NORMAL=1, JOINTS_0=3, WEIGHTS_0=4
+                            POSITION=0,
+                            NORMAL=1,
+                            JOINTS_0=3,
+                            WEIGHTS_0=4,
+                            TEXCOORD_0=6 if has_texture else None,
                         ),
                         indices=2,
                         material=0,
@@ -169,15 +193,22 @@ def export_skinned_glb(
         ],
         materials=[
             pygltflib.Material(
-                name="skin_placeholder",
+                name="skin" if has_texture else "skin_placeholder",
                 pbrMetallicRoughness=pygltflib.PbrMetallicRoughness(
-                    baseColorFactor=[0.76, 0.63, 0.55, 1.0],
+                    baseColorTexture=(
+                        pygltflib.TextureInfo(index=0) if has_texture else None
+                    ),
+                    baseColorFactor=(
+                        [1.0, 1.0, 1.0, 1.0] if has_texture else [0.76, 0.63, 0.55, 1.0]
+                    ),
                     metallicFactor=0.0,
                     roughnessFactor=0.85,
                 ),
                 doubleSided=False,
             )
         ],
+        textures=[pygltflib.Texture(source=0)] if has_texture else [],
+        images=[pygltflib.Image(bufferView=7, mimeType="image/png")] if has_texture else [],
         accessors=accessors,
         bufferViews=buffer_views,
         buffers=[pygltflib.Buffer(byteLength=len(blob))],
@@ -187,6 +218,19 @@ def export_skinned_glb(
     gltf.save_binary(str(target))
     _assert_readable(target)
     return target
+
+
+def _encode_png(albedo: np.ndarray) -> bytes:
+    """PNG rather than raw bytes: glTF images are encoded, and it keeps size sane."""
+    import io
+
+    try:
+        from PIL import Image
+    except ImportError as exc:
+        raise RuntimeError("Embedding a texture needs Pillow.") from exc
+    buffer = io.BytesIO()
+    Image.fromarray(albedo).save(buffer, format="PNG", optimize=True)
+    return buffer.getvalue()
 
 
 def _assert_readable(path: Path) -> None:

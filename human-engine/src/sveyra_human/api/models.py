@@ -94,6 +94,7 @@ class AvatarArtifact:
     source_views: int = 0
     _mesh: object | None = None
     _skeleton: object | None = None
+    _texture: object | None = None
 
     def metadata(self) -> dict[str, object]:
         return {
@@ -119,8 +120,14 @@ class AvatarArtifact:
         if self._mesh is None:
             raise RuntimeError("artifact carries no mesh")
         target = Path(path)
+        albedo = getattr(self._texture, "albedo", None)
         if rigged and self._skeleton is not None:
-            export_skinned_glb(self._mesh, self._skeleton, target)  # type: ignore[arg-type]
+            export_skinned_glb(
+                self._mesh,  # type: ignore[arg-type]
+                self._skeleton,  # type: ignore[arg-type]
+                target,
+                albedo=albedo,
+            )
         else:
             export_glb(self._mesh, target)  # type: ignore[arg-type]
         write_sidecars(self, target.parent)

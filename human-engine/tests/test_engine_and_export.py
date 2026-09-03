@@ -88,7 +88,7 @@ def test_photo_build_refuses_an_unsegmentable_image(engine: SveyraHumanEngine) -
         engine.build(front=flat, height_cm=180.0)
 
 
-@pytest.mark.parametrize("stage", ["fit_face", "generate_texture", "build_hair"])
+@pytest.mark.parametrize("stage", ["fit_face", "build_hair"])
 def test_unbuilt_stages_say_so(engine: SveyraHumanEngine, stage: str) -> None:
     with pytest.raises(NotImplementedYetError):
         getattr(engine, stage)()

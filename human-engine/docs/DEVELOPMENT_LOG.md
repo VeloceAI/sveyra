@@ -4,6 +4,47 @@ Newest first.
 
 ---
 
+## Phase 5 - Texturing from the person's own photographs
+
+Identity lives mostly in texture, not geometry. Two people with the same
+measurements are told apart by skin tone and the shape of a face in pixels, so
+the surest way to make an avatar look like someone is to use their photograph
+rather than to invent detail.
+
+### Unwrapping is easy here, and the seam is not
+
+A ring stack is a cylinder, and a cylinder unrolls to a rectangle. Each body part
+takes a horizontal strip of the atlas sized by its ring count, so a torso is not
+squeezed into the same space as a foot and parts cannot bleed into each other.
+
+The seam is unsolved and now says so. Rings unwrap with `endpoint=False`, so the
+last column sits near u=0.94 and its wrap triangle spans backwards across the
+strip; texels past it are filled from neighbours. Fixing it properly means
+duplicating the seam column, which changes vertex count and ripples into skin
+weights and the cage-to-mesh mapping. The docstring originally claimed the split
+was done. It was not, and has been corrected.
+
+### Blending by facing angle, and admitting the gaps
+
+Each view contributes in proportion to how squarely its camera faced the
+triangle. A glancing view smears pixels along the surface, so anything below a
+threshold contributes nothing at all.
+
+About a fifth of the atlas is never seen by any camera - under the arms, the
+inside of a thigh. Those texels are grown from the nearest observed colour and
+recorded in a coverage mask, so a caller can tell observation from inference.
+Nothing is hallucinated.
+
+### Verification
+
+- 156 tests pass, ruff clean
+- A red subject produces red texels, so the photograph genuinely reaches the atlas
+- Three views cover more of the body than one
+- One UV per vertex at every subdivision level
+- The exported GLB carries TEXCOORD_0, an embedded PNG and a baseColorTexture
+
+---
+
 ## Phase 7 - Rig, collision proxies, garment contract
 
 The avatar can now be posed, and a garment engine has something to talk to.

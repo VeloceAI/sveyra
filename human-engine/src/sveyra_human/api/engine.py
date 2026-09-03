@@ -19,6 +19,7 @@ from sveyra_human.body.anatomy import measurements
 from sveyra_human.body.cage import BodyCage, build_cage
 from sveyra_human.body.mesh_deformer import SurfaceMesh, cage_to_mesh
 from sveyra_human.body.parameters import BodyParameters
+from sveyra_human.capture.image_normalizer import load_image
 from sveyra_human.skeleton.model import Skeleton, build_skeleton
 from sveyra_human.vision.port import PersonSegmenter
 from sveyra_human.vision.segmentation import BackgroundContrastSegmenter
@@ -63,10 +64,12 @@ class SveyraHumanEngine:
         with self._timed("cage"):
             return build_cage(params, skeleton.positions)
 
-    def build_surface(self, cage: BodyCage, quality_mode: str | None = None) -> SurfaceMesh:
+    def build_surface(
+        self, cage: BodyCage, quality_mode: str | None = None, with_uv: bool = False
+    ) -> SurfaceMesh:
         mode = quality_mode or self.quality_mode
         with self._timed("mesh"):
-            return cage_to_mesh(cage, subdivisions=SUBDIVISIONS[mode])
+            return cage_to_mesh(cage, subdivisions=SUBDIVISIONS[mode], with_uv=with_uv)
 
     def fit_from_silhouettes(
         self, views: dict[str, object], height_cm: float
@@ -138,8 +141,23 @@ class SveyraHumanEngine:
     def fit_face(self, *_args: object, **_kwargs: object) -> None:
         raise NotImplementedYetError("Face fitting lands in Phase 4.")
 
-    def generate_texture(self, *_args: object, **_kwargs: object) -> None:
-        raise NotImplementedYetError("Projective texturing lands in Phase 5.")
+    def generate_texture(
+        self,
+        mesh: SurfaceMesh,
+        photographs: dict[str, object],
+        height_cm: float,
+        resolution: int = 1024,
+    ) -> object:
+        """Paint the person's own photographs onto the fitted surface."""
+        from sveyra_human.texture import cameras_for_views, project_views_to_texture
+
+        if mesh.uv is None:
+            raise ValueError("mesh has no UVs; build it with with_uv=True")
+        with self._timed("texture"):
+            cameras = cameras_for_views(photographs, height_cm)  # type: ignore[arg-type]
+            return project_views_to_texture(
+                mesh, mesh.uv, photographs, cameras, resolution=resolution  # type: ignore[arg-type]
+            )
 
     def build_hair(self, *_args: object, **_kwargs: object) -> None:
         raise NotImplementedYetError("Hair volumes land in Phase 6.")
@@ -147,7 +165,10 @@ class SveyraHumanEngine:
     # -- entry points ---------------------------------------------------
 
     def build_parametric(
-        self, params: BodyParameters, quality_mode: str | None = None
+        self,
+        params: BodyParameters,
+        quality_mode: str | None = None,
+        with_uv: bool = False,
     ) -> AvatarArtifact:
         """Numbers to avatar. No photographs involved."""
         self._timings = {}
@@ -155,7 +176,7 @@ class SveyraHumanEngine:
 
         skeleton = self.fit_skeleton(params)
         cage = self.fit_body(params, skeleton)
-        mesh = self.build_surface(cage, quality_mode)
+        mesh = self.build_surface(cage, quality_mode, with_uv=with_uv)
 
         with self._timed("measurements"):
             derived = measurements(params)
@@ -199,6 +220,7 @@ class SveyraHumanEngine:
         if height_cm is None:
             raise ValueError("height_cm is required: it is what sets the scale")
 
+        sources: dict[str, object] = {"front": front, "side": side, "back": back}
         request = AvatarBuildRequest(
             height_cm=height_cm,
             front_image=front,
@@ -220,11 +242,24 @@ class SveyraHumanEngine:
         params = self.fit_from_silhouettes(masks, height_cm)
         fitting_ms = self._timings.get("fitting_ms", 0.0)
 
-        artifact = self.build_parametric(params, request.quality_mode)
+        artifact = self.build_parametric(params, request.quality_mode, with_uv=True)
+
+        # Identity lives mostly in texture: use the caller's own photographs
+        # rather than inventing skin.
+        photographs = {v: load_image(sources[v]) for v in masks if sources.get(v) is not None}
+        texture_ms = 0.0
+        if photographs and artifact._mesh is not None:
+            texture = self.generate_texture(
+                artifact._mesh, photographs, height_cm, request.texture_resolution
+            )
+            artifact._texture = texture
+            texture_ms = self._timings.get("texture_ms", 0.0)
+
         artifact.profiling_ms["vision_ms"] = vision_ms
         artifact.profiling_ms["fitting_ms"] = fitting_ms
+        artifact.profiling_ms["texture_ms"] = texture_ms
         artifact.profiling_ms["total_ms"] = round(
-            artifact.profiling_ms.get("total_ms", 0.0) + vision_ms + fitting_ms, 3
+            artifact.profiling_ms.get("total_ms", 0.0) + vision_ms + fitting_ms + texture_ms, 3
         )
         artifact.source_views = len(masks)
         artifact.quality = self._photo_quality(masks, report)

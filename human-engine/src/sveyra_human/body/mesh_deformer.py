@@ -26,6 +26,7 @@ from sveyra_human.body.cage import BodyCage, CagePart
 class SurfaceMesh:
     vertices: np.ndarray  # (n, 3) float32
     faces: np.ndarray  # (m, 3) uint32
+    uv: np.ndarray | None = None  # (n, 2) float32, when unwrapped
 
     @property
     def vertex_count(self) -> int:
@@ -84,7 +85,7 @@ def _loft_part(part: CagePart, offset: int) -> tuple[np.ndarray, np.ndarray]:
     return verts, np.array(faces, dtype=np.uint32)
 
 
-def cage_to_mesh(cage: BodyCage, subdivisions: int = 1) -> SurfaceMesh:
+def cage_to_mesh(cage: BodyCage, subdivisions: int = 1, with_uv: bool = False) -> SurfaceMesh:
     """Loft every cage part and concatenate the result into one mesh."""
     all_verts: list[np.ndarray] = []
     all_faces: list[np.ndarray] = []
@@ -95,9 +96,16 @@ def cage_to_mesh(cage: BodyCage, subdivisions: int = 1) -> SurfaceMesh:
         all_faces.append(faces)
         offset += int(verts.shape[0])
 
+    uv = None
+    if with_uv:
+        from sveyra_human.texture.uv import unwrap_cage
+
+        uv = unwrap_cage(cage)
+
     mesh = SurfaceMesh(
         vertices=np.vstack(all_verts).astype(np.float32),
         faces=np.vstack(all_faces).astype(np.uint32),
+        uv=uv,
     )
     for _ in range(max(0, subdivisions)):
         mesh = subdivide(mesh)
@@ -128,7 +136,14 @@ def subdivide(mesh: SurfaceMesh) -> SurfaceMesh:
         ab, bc, ca = mid(a, b), mid(b, c), mid(c, a)
         faces.extend([(a, ab, ca), (ab, b, bc), (ca, bc, c), (ab, bc, ca)])
 
+    uv = None
+    if mesh.uv is not None:
+        from sveyra_human.texture.uv import subdivide_uv
+
+        uv = subdivide_uv(mesh.uv, mesh.faces)
+
     return SurfaceMesh(
         vertices=np.array(verts, dtype=np.float32),
         faces=np.array(faces, dtype=np.uint32),
+        uv=uv,
     )

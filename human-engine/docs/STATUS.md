@@ -3,7 +3,7 @@
 What actually runs today, and what is only a designed interface. Nothing in the
 "works" column is mocked; nothing in the "not built" column pretends to succeed.
 
-Last verified 2026-09-04 against 144 passing tests.
+Last verified 2026-09-04 against 156 passing tests.
 
 ## Works
 
@@ -31,6 +31,9 @@ Last verified 2026-09-04 against 144 passing tests.
 | Dual quaternion skinning | `rig/dqs.py` | CPU posing for measurement. Sign-aligned blending, volume preserving. |
 | Collision proxies | `physics/collision_body.py` | 10 capsules with signed distance. Cloth collides with these, not 6,000 triangles. |
 | Garment contract | `garment/body_adapter.py` | `SveyraBody` satisfies the runtime-checkable protocol. |
+| **UV unwrapping** | `texture/uv.py` | Ring stacks unroll to atlas strips, carried through subdivision. |
+| **Projective texturing** | `texture/projection.py` | The person's own photographs painted onto the surface, blended by facing angle. |
+| Textured GLB | `export/skinned_gltf.py` | Embedded PNG, TEXCOORD_0, baseColorTexture. |
 | Provider seam | `providers/` | Protocol plus a deterministic mock. Core cannot import a provider; a test enforces it. |
 | Garment interface | `garment/interfaces.py` | Collision body, measurements, skeleton, mesh, pose. |
 | Collision primitives | `body/anatomy.py` | 14 capsules for cloth to collide against. |
@@ -46,6 +49,8 @@ Last verified 2026-09-04 against 144 passing tests.
 | Photograph to avatar, 2 views | ~0.9 s including segmentation |
 | Skinning 3,528 vertices to 18 bones | ~20 ms |
 | Rigged GLB | 255 KB, 18 joints |
+| Photo to textured rigged avatar | ~3.1 s for 3 views, 625 KB GLB |
+| Texture coverage | ~79% painted from photographs, remainder inferred |
 | Segmentation quality | IoU 0.995 against ground truth on a lit, noisy wall |
 | Fit accuracy, torso widths | within 10% across five body types; typically 1-4% |
 
@@ -74,7 +79,6 @@ something plausible.
 | 3 | Fitting shoulder width and limb girths | Only the six torso width/depth parameters are solved; arms obscure the shoulder band. |
 | 3 | Canonical base mesh + cage deformation | Topology is currently generated, not authored. Blocks garment transfer and morph targets. |
 | 4 | Face fitting | |
-| 5 | Projective texturing | Until this lands the avatar cannot resemble a specific person. |
 | 6 | Hair volumes | |
 | 7 | Corrective shapes and soft tissue | Skinning works; joints have no corrective morphs, so extreme bends will pinch. |
 | 8 | Vertex try-on provider | Config reads env correctly; transport raises. |
@@ -115,6 +119,16 @@ something plausible.
   shapes yet.
 - **Only the rest pose exists.** `get_pose()` reports `posed: false` rather than
   implying animation is supported.
+- **The UV seam is not solved.** Rings unwrap with `endpoint=False`, so texels
+  past the last column are filled from neighbours rather than painted. Fixing it
+  means duplicating the seam column, which changes vertex count and ripples into
+  skin weights. Deferred deliberately; visible only at high texture resolution.
+- **About a fifth of the texture is inferred**, not observed. No camera sees
+  under an arm or the inside of a thigh, so those texels are grown from the
+  nearest observed colour. `TextureSet.coverage` records exactly where.
+- **Texturing is the slowest stage** at roughly 1.8 s, because it rasterises
+  each triangle in Python. It is well inside the 5-20 s target but is the first
+  place to look if that changes.
 - **Band sampling takes the widest row per band**, which slightly over-reads
   narrow regions. 64 bands keeps that under a centimetre; coarser banding
   over-estimated the waist by about 10%.

@@ -1,4 +1,15 @@
-"""Projective texturing from the real photographs. Phase 5.
+from sveyra_human.texture.projection import (
+    TextureSet,
+    cameras_for_views,
+    project_views_to_texture,
+)
+from sveyra_human.texture.uv import build_uv_layout, subdivide_uv, unwrap_cage
 
-Not implemented. See docs/STATUS.md for what actually works today.
-"""
+__all__ = [
+    "TextureSet",
+    "build_uv_layout",
+    "cameras_for_views",
+    "project_views_to_texture",
+    "subdivide_uv",
+    "unwrap_cage",
+]
