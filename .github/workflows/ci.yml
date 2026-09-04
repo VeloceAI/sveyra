@@ -47,7 +47,10 @@ jobs:
           cache-dependency-path: backend/requirements.txt
 
       - name: Install dependencies
-        run: pip install -r backend/requirements.txt
+        # Only what Alembic needs. Installing the whole backend would drag in the
+        # human engine via a relative editable path, which does not resolve from
+        # the repository root, and this job has no use for it either way.
+        run: pip install "alembic==1.16.4" "sqlalchemy==2.0.42" "psycopg[binary]==3.2.9"
 
       - name: Single migration head
         # More than one head means two branches added migrations in parallel.

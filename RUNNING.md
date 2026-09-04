@@ -16,6 +16,10 @@ npm install
 `backend/requirements.txt` installs the human engine from `../human-engine` as an
 editable dependency, so a change to the engine is picked up without reinstalling.
 
+That path is relative to `backend/`, so pip has to be run from there. It also
+means a container that copies only `backend/` will not find the engine: a
+deployment needs both directories, or the engine published as a package.
+
 ## Create the database
 
 SQLite is enough to try the product. Postgres is what production uses.
