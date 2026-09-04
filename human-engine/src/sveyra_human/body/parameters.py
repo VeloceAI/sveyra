@@ -12,6 +12,8 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field, fields
 
+from sveyra_human.body.proportions import ProportionsSource, resolve
+
 # Proportions of a neutral adult, expressed as fractions of standing height so
 # that a body can be generated from height alone. Sources are anthropometric
 # rules of thumb, not a dataset, so they carry no licence.
@@ -107,12 +109,18 @@ class BodyParameters:
     # bag rather than as fields so adding one later is not a schema break.
     extra: dict[str, float] = field(default_factory=dict)
 
+    # Where unset measurements come from. Swappable so a mapping learned from
+    # scanned bodies can replace the rule-of-thumb table without touching this.
+    proportions: ProportionsSource | None = None
+
     def __post_init__(self) -> None:
         if self.height <= 0:
             raise ValueError("height must be positive")
         if not 50.0 <= self.height <= 260.0:
             raise ValueError(f"height {self.height} cm is outside the supported range")
-        for name, fraction in _NEUTRAL.items():
+        weight = self.extra.get("weight_kg")
+        source = resolve(self.proportions)
+        for name, fraction in source.fractions(self.height, weight).items():
             if getattr(self, name, None) is None:
                 setattr(self, name, round(self.height * fraction, 3))
         if self.waist_position is None:
@@ -125,7 +133,10 @@ class BodyParameters:
         return self.height * _LEVELS[landmark]
 
     def to_dict(self) -> dict[str, object]:
-        return asdict(self)
+        data = asdict(self)
+        # The source is behaviour, not data; a stored body must not carry it.
+        data.pop("proportions", None)
+        return data
 
     @classmethod
     def from_dict(cls, data: dict[str, object]) -> BodyParameters:
