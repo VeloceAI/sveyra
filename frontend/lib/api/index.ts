@@ -11,6 +11,8 @@ import type {
   ProfilePersistRequest,
   RecommendationResponse,
   AvatarBuildResponse,
+  GapResponse,
+  ShoppingResponse,
   RegisterResponse,
   TokenResponse,
   WardrobeItem,
@@ -66,6 +68,19 @@ export async function fetchMediaObjectUrl(assetId: string): Promise<string> {
   });
   if (!response.ok) throw new Error("Could not download the avatar.");
   return URL.createObjectURL(await response.blob());
+}
+
+export function getWardrobeGaps() {
+  // Both endpoints take an empty body. Passing {} is required: without a body
+  // apiRequest would send a GET.
+  return apiRequest<GapResponse>("/v1/recommendations/gaps", { method: "POST", body: {} });
+}
+
+export function getShoppingRecommendations() {
+  return apiRequest<ShoppingResponse>("/v1/recommendations/shopping", {
+    method: "POST",
+    body: {},
+  });
 }
 
 export function getCurrentProfile() {

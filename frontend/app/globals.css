@@ -238,3 +238,21 @@ button:disabled {
 .avatar-report td { padding: 4px 18px 4px 0; font-size: 14px; }
 .avatar-report td.numeric { font-variant-numeric: tabular-nums; text-align: right; }
 .warning { font-style: italic; }
+
+
+/* Wardrobe gaps */
+.gap-clear { margin-top: 20px; }
+.gap-list { display: flex; flex-direction: column; gap: 16px; margin-top: 18px; }
+.gap-card { border: 1px solid currentColor; border-radius: 8px; padding: 16px 18px; }
+.gap-card header { display: flex; align-items: baseline; gap: 12px; }
+.gap-card h2 { margin: 0; font-size: 17px; }
+.gap-priority {
+  font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; opacity: 0.7;
+}
+.product-list { list-style: none; padding: 0; margin: 12px 0 0; }
+.product-list li {
+  display: flex; justify-content: space-between; align-items: baseline;
+  gap: 12px; padding: 7px 0; border-top: 1px solid currentColor;
+}
+.product-meta { display: flex; gap: 14px; align-items: baseline; }
+.product-meta .numeric { font-variant-numeric: tabular-nums; }
