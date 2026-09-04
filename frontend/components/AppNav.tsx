@@ -8,6 +8,7 @@ import { clearSession, getAccessToken, getRefreshToken } from "@/lib/auth/sessio
 
 const LINKS = [
   { href: "/profile", label: "Profile" },
+  { href: "/avatar", label: "Avatar" },
   { href: "/wardrobe", label: "Wardrobe" },
   { href: "/recommend", label: "Recommend" },
   { href: "/outfits", label: "Outfits" },

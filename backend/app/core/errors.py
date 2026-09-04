@@ -199,6 +199,16 @@ async def invalid_refresh_token_handler(
     )
 
 
+async def avatar_unavailable_handler(_request: Request, exc: Exception) -> JSONResponse:
+    return JSONResponse(
+        status_code=503,
+        content=error_body(
+            "avatar_unavailable",
+            str(exc) or "Avatar generation is unavailable. Try again shortly.",
+        ),
+    )
+
+
 async def rate_limit_exceeded_handler(
     _request: Request, _exc: RateLimitExceededError
 ) -> JSONResponse:

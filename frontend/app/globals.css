@@ -222,3 +222,19 @@ button:disabled {
 .auth-card {
   width: min(420px, 100%);
 }
+
+
+/* Avatar */
+.avatar-form { display: flex; flex-direction: column; gap: 14px; margin: 20px 0; }
+.avatar-uploads { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+.avatar-form label { display: flex; flex-direction: column; gap: 6px; font-size: 14px; }
+.viewer { width: 100%; border-radius: 8px; overflow: hidden; background: #14161c; }
+.viewer-placeholder {
+  display: flex; align-items: center; justify-content: center;
+  border: 1px dashed currentColor; border-radius: 8px; opacity: 0.45; font-size: 14px;
+}
+.avatar-report { margin-top: 22px; }
+.avatar-report table { border-collapse: collapse; }
+.avatar-report td { padding: 4px 18px 4px 0; font-size: 14px; }
+.avatar-report td.numeric { font-variant-numeric: tabular-nums; text-align: right; }
+.warning { font-style: italic; }

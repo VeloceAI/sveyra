@@ -101,3 +101,47 @@ def test_upload_still_works_after_access_endpoint(client: TestClient) -> None:
     response = _upload(client, headers)
     assert response.status_code == 200
     assert response.json()["reference"].startswith("asset_")
+
+
+def test_owned_bytes_can_be_downloaded(client: TestClient) -> None:
+    """A browser has to load a GLB, and an in-memory backend has no URL to follow."""
+    _user_id, headers = register_and_auth(client, "content-owner@example.com")
+    uploaded = client.post(
+        "/v1/media/upload",
+        headers=headers,
+        files={"file": ("a.bin", b"avatar-bytes", "application/octet-stream")},
+    ).json()
+
+    response = client.get(f"/v1/media/{uploaded['id']}/content", headers=headers)
+    assert response.status_code == 200
+    assert response.content == b"avatar-bytes"
+
+
+def test_a_glb_is_served_with_its_own_media_type(client: TestClient) -> None:
+    _user_id, headers = register_and_auth(client, "content-glb@example.com")
+    payload = b"glTF" + b"\x00" * 60
+    uploaded = client.post(
+        "/v1/media/upload", headers=headers, files={"file": ("a.glb", payload, "model/gltf-binary")}
+    ).json()
+
+    response = client.get(f"/v1/media/{uploaded['id']}/content", headers=headers)
+    assert response.headers["content-type"].startswith("model/gltf-binary")
+
+
+def test_another_user_cannot_download_your_bytes(client: TestClient) -> None:
+    _a, headers_a = register_and_auth(client, "content-a@example.com")
+    _b, headers_b = register_and_auth(client, "content-b@example.com")
+    uploaded = client.post(
+        "/v1/media/upload", headers=headers_a, files={"file": ("a.bin", b"private", None)}
+    ).json()
+
+    response = client.get(f"/v1/media/{uploaded['id']}/content", headers=headers_b)
+    assert response.status_code == 404
+
+
+def test_downloading_requires_authentication(client: TestClient) -> None:
+    _user_id, headers = register_and_auth(client, "content-anon@example.com")
+    uploaded = client.post(
+        "/v1/media/upload", headers=headers, files={"file": ("a.bin", b"x", None)}
+    ).json()
+    assert client.get(f"/v1/media/{uploaded['id']}/content").status_code == 401
