@@ -85,6 +85,46 @@ def _loft_part(part: CagePart, offset: int) -> tuple[np.ndarray, np.ndarray]:
     return verts, np.array(faces, dtype=np.uint32)
 
 
+def vertex_part_map(cage: BodyCage, subdivisions: int = 1) -> list[str]:
+    """Which cage part each mesh vertex belongs to, in vertex order.
+
+    This is the correspondence guarantee downstream work depends on: vertex N is
+    the same anatomical location on every avatar, because it comes from the same
+    ring and segment of the same part regardless of the body's proportions.
+
+    Subdivision has to be walked in step with the geometry, since each round
+    changes the faces the next round splits.
+    """
+    labels: list[str] = []
+    for part in cage.parts:
+        count = part.levels * part.segments + int(part.closed_bottom) + int(part.closed_top)
+        labels.extend([part.name] * count)
+
+    mesh = cage_to_mesh(cage, subdivisions=0)
+    for _ in range(max(0, subdivisions)):
+        labels = _labels_after_subdivision(mesh.faces, labels)
+        mesh = subdivide(mesh)
+    return labels
+
+
+def _labels_after_subdivision(faces: np.ndarray, labels: list[str]) -> list[str]:
+    """Extend labels with the midpoints `subdivide` appends, in the same order.
+
+    A midpoint inherits its edge's part. Edges never span parts, because parts
+    are lofted independently and share no vertices.
+    """
+    extended = list(labels)
+    seen: set[tuple[int, int]] = set()
+    for tri in faces:
+        a, b, c = int(tri[0]), int(tri[1]), int(tri[2])
+        for x, y in ((a, b), (b, c), (c, a)):
+            key = (x, y) if x < y else (y, x)
+            if key not in seen:
+                seen.add(key)
+                extended.append(labels[x])
+    return extended
+
+
 def cage_to_mesh(cage: BodyCage, subdivisions: int = 1, with_uv: bool = False) -> SurfaceMesh:
     """Loft every cage part and concatenate the result into one mesh."""
     all_verts: list[np.ndarray] = []
