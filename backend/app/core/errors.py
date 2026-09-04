@@ -67,6 +67,10 @@ class RateLimitExceededError(Exception):
     pass
 
 
+class WearLogNotFoundError(Exception):
+    pass
+
+
 class UnauthorizedError(Exception):
     pass
 
@@ -206,6 +210,13 @@ async def avatar_unavailable_handler(_request: Request, exc: Exception) -> JSONR
             "avatar_unavailable",
             str(exc) or "Avatar generation is unavailable. Try again shortly.",
         ),
+    )
+
+
+async def wear_log_not_found_handler(_request: Request, _exc: WearLogNotFoundError) -> JSONResponse:
+    return JSONResponse(
+        status_code=404,
+        content=error_body("wear_log_not_found", "No calendar entry for that date."),
     )
 
 

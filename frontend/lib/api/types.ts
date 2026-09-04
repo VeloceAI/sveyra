@@ -161,3 +161,27 @@ export type ShoppingProduct = {
 };
 
 export type ShoppingResponse = { products: ShoppingProduct[] };
+
+export type WearLog = {
+  id: string;
+  user_id: string;
+  worn_on: string;
+  outfit_id: string | null;
+  item_ids: string[];
+  occasion: string | null;
+  note: string | null;
+  planned: boolean;
+};
+
+export type WearLogListResponse = {
+  entries: WearLog[];
+  start: string;
+  end: string;
+  total: number;
+};
+
+export type WardrobeUsageResponse = {
+  most_worn: { item_id: string; times_worn: number }[];
+  never_worn_item_ids: string[];
+  logged_days: number;
+};

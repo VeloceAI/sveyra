@@ -12,6 +12,9 @@ import type {
   RecommendationResponse,
   AvatarBuildResponse,
   GapResponse,
+  WardrobeUsageResponse,
+  WearLog,
+  WearLogListResponse,
   ShoppingResponse,
   RegisterResponse,
   TokenResponse,
@@ -68,6 +71,32 @@ export async function fetchMediaObjectUrl(assetId: string): Promise<string> {
   });
   if (!response.ok) throw new Error("Could not download the avatar.");
   return URL.createObjectURL(await response.blob());
+}
+
+export function listCalendar(start?: string, end?: string) {
+  const query = new URLSearchParams();
+  if (start) query.set("start", start);
+  if (end) query.set("end", end);
+  const suffix = query.toString() ? `?${query}` : "";
+  return apiRequest<WearLogListResponse>(`/v1/calendar${suffix}`);
+}
+
+export function logWear(entry: {
+  worn_on: string;
+  item_ids?: string[];
+  occasion?: string | null;
+  note?: string | null;
+  planned?: boolean;
+}) {
+  return apiRequest<WearLog>("/v1/calendar", { method: "POST", body: entry });
+}
+
+export function deleteWearLog(wornOn: string) {
+  return apiRequest<void>(`/v1/calendar/${wornOn}`, { method: "DELETE" });
+}
+
+export function getWardrobeUsage() {
+  return apiRequest<WardrobeUsageResponse>("/v1/calendar/usage");
 }
 
 export function getWardrobeGaps() {

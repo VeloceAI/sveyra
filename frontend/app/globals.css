@@ -256,3 +256,24 @@ button:disabled {
 }
 .product-meta { display: flex; gap: 14px; align-items: baseline; }
 .product-meta .numeric { font-variant-numeric: tabular-nums; }
+
+
+/* Style calendar */
+.calendar-form { display: flex; flex-direction: column; gap: 14px; margin: 18px 0 26px; }
+.calendar-form label { display: flex; flex-direction: column; gap: 6px; font-size: 14px; }
+.calendar-items { border: 1px solid currentColor; border-radius: 8px; padding: 12px 14px; }
+.calendar-items legend { font-size: 13px; padding: 0 6px; }
+.calendar-items .checkbox {
+  flex-direction: row; align-items: center; gap: 8px; padding: 2px 0; cursor: pointer;
+}
+.calendar-list { list-style: none; padding: 0; }
+.calendar-list li {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  gap: 14px; padding: 10px 0; border-top: 1px solid currentColor;
+}
+.tag {
+  font-size: 11px; letter-spacing: 0.05em; text-transform: uppercase;
+  border: 1px solid currentColor; border-radius: 3px; padding: 0 5px; margin-left: 6px;
+}
+.usage { margin-top: 28px; }
+.usage ul { padding-left: 20px; }

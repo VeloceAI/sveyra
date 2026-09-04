@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from app.models.refresh_token import RefreshToken
     from app.models.style_profile import StyleProfile
     from app.models.wardrobe_item import WardrobeItem
+    from app.models.wear_log import WearLog
 
 
 class User(Base):
@@ -32,3 +33,4 @@ class User(Base):
     media_assets: Mapped[list["MediaAsset"]] = relationship(back_populates="user")
     outfits: Mapped[list["Outfit"]] = relationship(back_populates="user")
     refresh_tokens: Mapped[list["RefreshToken"]] = relationship(back_populates="user")
+    wear_logs: Mapped[list["WearLog"]] = relationship(back_populates="user")
