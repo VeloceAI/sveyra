@@ -3,7 +3,7 @@
 What actually runs today, and what is only a designed interface. Nothing in the
 "works" column is mocked; nothing in the "not built" column pretends to succeed.
 
-Last verified 2026-09-04 against 257 passing tests.
+Last verified 2026-09-04 against 259 passing tests.
 
 ## Works
 
