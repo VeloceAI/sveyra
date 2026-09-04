@@ -85,7 +85,12 @@ def _tapered_limb(
         reference = np.array([1.0, 0.0, 0.0])
     u = np.cross(axis, reference)
     u /= np.linalg.norm(u)
-    v = np.cross(axis, u)
+    # v = u x axis, not axis x u. Torso rings are built as (cos*X, sin*Z)
+    # ascending in +Y, and cross(X, Z) = -Y, so the torso frame is left-handed
+    # with respect to its own ascent axis. A limb built right-handed winds the
+    # opposite way, which flips its triangles and points every limb normal
+    # inward. Matching the handedness keeps one consistent outward surface.
+    v = np.cross(u, axis)
 
     t = np.linspace(0.0, 1.0, levels)
     angles = np.linspace(0.0, 2.0 * np.pi, segments, endpoint=False)

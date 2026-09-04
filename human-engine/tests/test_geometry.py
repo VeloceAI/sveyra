@@ -136,3 +136,47 @@ def test_subdivision_quadruples_faces_without_moving_the_surface(
     lo_b, hi_b = finer.bounds()
     assert np.allclose(lo_a, lo_b, atol=1e-3)
     assert np.allclose(hi_a, hi_b, atol=1e-3)
+
+
+def test_limb_normals_point_outward(params: BodyParameters) -> None:
+    """Inward-facing limbs are invisible under backface culling.
+
+    The GLB exports with doubleSided false, so a flipped winding makes arms and
+    legs render inside-out in any real viewer. Silhouette tests cannot catch
+    this: an outline does not care which way a normal points.
+    """
+    from sveyra_human.body.mesh_deformer import vertex_part_map
+
+    cage = build_cage(params, build_skeleton(params).positions)
+    mesh = cage_to_mesh(cage, subdivisions=0)
+    labels = np.array(vertex_part_map(cage, subdivisions=0))
+    normals = mesh.normals()
+
+    for part in ("torso", "head", "upperarm_L", "forearm_L", "thigh_L", "calf_L"):
+        selected = np.where(labels == part)[0]
+        points = mesh.vertices[selected]
+        radial = points - points.mean(axis=0)
+        lengths = np.linalg.norm(radial, axis=1, keepdims=True)
+        lengths[lengths == 0] = 1.0
+        outward = np.mean(np.einsum("ij,ij->i", normals[selected], radial / lengths) > 0)
+        assert outward > 0.65, f"{part} normals point inward ({outward:.0%} outward)"
+
+
+def test_limb_and_torso_windings_agree(params: BodyParameters) -> None:
+    """One consistent surface orientation across the whole body."""
+    from sveyra_human.body.mesh_deformer import vertex_part_map
+
+    cage = build_cage(params, build_skeleton(params).positions)
+    mesh = cage_to_mesh(cage, subdivisions=0)
+    labels = np.array(vertex_part_map(cage, subdivisions=0))
+    normals = mesh.normals()
+
+    def outwardness(part: str) -> float:
+        selected = np.where(labels == part)[0]
+        points = mesh.vertices[selected]
+        radial = points - points.mean(axis=0)
+        lengths = np.linalg.norm(radial, axis=1, keepdims=True)
+        lengths[lengths == 0] = 1.0
+        return float(np.mean(np.einsum("ij,ij->i", normals[selected], radial / lengths) > 0))
+
+    assert abs(outwardness("torso") - outwardness("thigh_L")) < 0.35
