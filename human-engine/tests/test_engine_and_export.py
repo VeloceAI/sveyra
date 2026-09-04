@@ -7,7 +7,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from sveyra_human import BodyParameters, NotImplementedYetError, SveyraHumanEngine
+from sveyra_human import BodyParameters, SveyraHumanEngine
 from sveyra_human.api.models import AvatarBuildRequest
 from sveyra_human.providers.mock.tryon import MockTryOnProvider
 from sveyra_human.providers.vertex.tryon import VertexTryOnProvider
@@ -88,10 +88,12 @@ def test_photo_build_refuses_an_unsegmentable_image(engine: SveyraHumanEngine) -
         engine.build(front=flat, height_cm=180.0)
 
 
-@pytest.mark.parametrize("stage", ["fit_face", "build_hair"])
-def test_unbuilt_stages_say_so(engine: SveyraHumanEngine, stage: str) -> None:
-    with pytest.raises(NotImplementedYetError):
-        getattr(engine, stage)()
+def test_no_pipeline_stage_is_left_unimplemented() -> None:
+    """Every phase has landed, so nothing should still be raising a placeholder."""
+    import inspect
+
+    source = inspect.getsource(SveyraHumanEngine)
+    assert "NotImplementedYetError" not in source
 
 
 def test_a_parametric_build_never_claims_photographic_confidence(

@@ -11,11 +11,11 @@ research-only licences.
 
 ## Status
 
-Phases 1 and 3 of 9. Parameters in, rigged topology and a GLB out, and silhouettes
-in, body parameters out. All on CPU: ~19 ms to build, ~0.7 s to fit. Turning a
-photograph into a silhouette (Phase 2) is not built and refuses rather than faking it.
+All nine phases. Photographs in, a fitted, textured, rigged avatar out. Parameters
+in works too. All on CPU: ~19 ms to build, ~0.7 s to fit, ~3 s photo to GLB.
+Nothing is faked: unusable input is refused rather than quietly given a default body.
 
-See [docs/STATUS.md](docs/STATUS.md) for the exact line between the two.
+See [docs/STATUS.md](docs/STATUS.md) for what works, what is shallow, and why.
 
 ## Quick start
 
@@ -49,6 +49,17 @@ python -m http.server -d viewer/threejs 8080
 Orbit, wireframe, vertex normals, ground grid, axes, live vertex and dimension
 readout.
 
+## Pipeline
+
+```
+photographs -> segment -> fit body -> shape face -> texture -> hair -> rig -> GLB
+```
+
+Every stage is replaceable and every stage refuses rather than inventing. No
+usable front view means no avatar; no visible hair means a bald head, not
+default hair; no side view means depth is inferred and the quality report says
+so.
+
 ## Design
 
 Read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). The short version:
@@ -74,6 +85,6 @@ a row in that table.
 .venv/Scripts/python -m pytest -q
 ```
 
-89 passing, including the Phase 3 acceptance test:
+215 passing, including the Phase 3 acceptance test:
 synthetic silhouettes are generated from known parameters and the fitter must
 recover them to within 5 percent.

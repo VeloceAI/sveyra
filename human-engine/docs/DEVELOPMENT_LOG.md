@@ -4,6 +4,58 @@ Newest first.
 
 ---
 
+## Phases 4 and 6 - Face and hair
+
+The last two phases. Every stage in the original plan is now implemented, and a
+test asserts the engine contains no `NotImplementedYetError` anywhere.
+
+### Face: validated without a face detector
+
+Same trick that made the body fitting measurable. `landmarks_from_parameters`
+generates the landmark set a perfect detector would produce for a known face, so
+recovery is measured rather than eyeballed. Exact on clean landmarks; about 6
+percent worst case with realistic detector jitter.
+
+Projections are excluded from `solved_fields()` rather than guessed. A single
+front view carries no depth information, so a fitted nose profile would be
+fabrication. One wandering landmark is clamped to a plausible range instead of
+being believed, because a detector that loses a point should not reshape a face.
+
+Geometry stays coarse on purpose. A jaw is a width at a height, not a sculpt.
+Likeness comes from texture, so mesh detail is effort in the wrong place.
+
+### Hair: the fixed skin rule failed immediately
+
+The first implementation tested pixels against a fixed idea of skin - red
+exceeding green and blue by a margin. Dark brown hair has exactly those ratios
+and differs only in brightness, so the first test run classified all the hair as
+skin and produced a bald head.
+
+The fix is the same idea that made background removal work: sample the subject's
+actual skin from the lower head region, which is reliably face, and keep what
+differs from it. Per-person, so it survives skin tone, lighting and hair colour
+together.
+
+Hair is seven groups of shells, not strands. Simulating strands is the wrong
+shape of problem for a try-on product, and grouping means a hairstyle can be
+replaced without touching the head, face or body: identity survives a haircut.
+Thickness is measured, not assumed - the hair silhouette is wider than the bare
+head by twice the hair depth.
+
+The crown initially came out bald because its height band selected too few rings
+to form a shell. Caught by asserting all seven groups build.
+
+### Verification
+
+- 215 tests pass, ruff clean
+- Faces of three sizes recovered to within 2 percent
+- Two different faces do not fit to the same answer
+- A bald head yields no hair rather than default hair
+- Dark trousers are not mistaken for hair
+- Every hair group builds over a normal head
+
+---
+
 ## Phase 5 - Texturing from the person's own photographs
 
 Identity lives mostly in texture, not geometry. Two people with the same

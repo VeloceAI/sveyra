@@ -3,7 +3,7 @@
 What actually runs today, and what is only a designed interface. Nothing in the
 "works" column is mocked; nothing in the "not built" column pretends to succeed.
 
-Last verified 2026-09-04 against 171 passing tests.
+Last verified 2026-09-04 against 215 passing tests.
 
 ## Works
 
@@ -34,6 +34,11 @@ Last verified 2026-09-04 against 171 passing tests.
 | **UV unwrapping** | `texture/uv.py` | Ring stacks unroll to atlas strips, carried through subdivision. |
 | **Projective texturing** | `texture/projection.py` | The person's own photographs painted onto the surface, blended by facing angle. |
 | Textured GLB | `export/skinned_gltf.py` | Embedded PNG, TEXCOORD_0, baseColorTexture. |
+| **Face parameters** | `face/parameters.py` | 18 named measurements; face length alone fills the rest. |
+| **Face fitting** | `face/fitter.py` | Landmarks to parameters. Exact on clean input, ~6% under detector noise. |
+| Head shaping | `face/deformation.py` | Scales head rings by face width profile. Depth untouched. |
+| **Hair segmentation** | `hair/segmentation.py` | Samples the person's own skin colour and keeps what differs. |
+| **Hair volumes** | `hair/reconstruction.py` | 7 swappable groups as shells over the skull, thickness measured from the silhouette. |
 | Provider seam | `providers/` | Protocol, deterministic mock, and a Vertex provider. Chosen by `TRYON_PROVIDER`. Core cannot import one; a test enforces it. |
 | Garment interface | `garment/interfaces.py` | Collision body, measurements, skeleton, mesh, pose. |
 | Collision primitives | `body/anatomy.py` | 14 capsules for cloth to collide against. |
@@ -51,6 +56,8 @@ Last verified 2026-09-04 against 171 passing tests.
 | Rigged GLB | 255 KB, 18 joints |
 | Photo to textured rigged avatar | ~3.1 s for 3 views, 625 KB GLB |
 | Texture coverage | ~79% painted from photographs, remainder inferred |
+| Face fit | exact on clean landmarks, ~6% worst case under detector jitter |
+| Hair | 7 groups, thickness measured to the centimetre from silhouette width |
 | Segmentation quality | IoU 0.995 against ground truth on a lit, noisy wall |
 | Fit accuracy, torso widths | within 10% across five body types; typically 1-4% |
 
@@ -69,19 +76,19 @@ Verified properties:
 
 ## Not built
 
-Every one of these raises `NotImplementedYetError` rather than returning
-something plausible.
+Every phase in the original plan has landed. `SveyraHumanEngine` no longer
+raises `NotImplementedYetError` anywhere, and a test asserts that.
 
-| Phase | Capability | Blocking note |
-| --- | --- | --- |
-| 2 | Pose landmarks | MediaPipe adapter written but untested here; fitting does not need pose. |
-| 2 | Camera calibration from a photo | Orthographic assumes an upright, centred subject. |
-| 3 | Fitting shoulder width and limb girths | Only the six torso width/depth parameters are solved; arms obscure the shoulder band. |
-| 3 | Canonical base mesh + cage deformation | Topology is currently generated, not authored. Blocks garment transfer and morph targets. |
-| 4 | Face fitting | |
-| 6 | Hair volumes | |
-| 7 | Corrective shapes and soft tissue | Skinning works; joints have no corrective morphs, so extreme bends will pinch. |
-| 8 | Vertex against the live service | Transport, encoding and response handling are written and tested against a fake. Never run against real Vertex: needs a GCP project. |
+What remains is depth rather than breadth:
+
+| Area | Gap |
+| --- | --- |
+| Face | Projections (nose, chin) are never solved. A front view carries no depth, and `solved_fields()` says so rather than guessing. |
+| Hair | Groups are shells, not strands. Control chains exist for a solver that does not exist yet. |
+| Rig | No corrective shapes, so extreme joint rotation pinches. |
+| Topology | Still generated rather than authored. This is the one that blocks garment transfer. |
+| Pose | Rest pose only. Nothing detects a rotated or seated subject. |
+| Vertex | Never run against the live service; tested against an injected fake. |
 
 ## Honest limitations of what does work
 
@@ -129,6 +136,13 @@ something plausible.
 - **Texturing is the slowest stage** at roughly 1.8 s, because it rasterises
   each triangle in Python. It is well inside the 5-20 s target but is the first
   place to look if that changes.
+- **Face geometry is coarse on purpose.** A jaw is a width at a height, not a
+  sculpt. Likeness comes from texture, and pushing effort into mesh detail would
+  be spending it in the wrong place.
+- **Hair segmentation only looks at the head region** and needs the face to be
+  visible, because the lower head is what it samples skin from. A hat, a hood,
+  or hair covering the whole face will defeat it, and it returns nothing rather
+  than guessing.
 - **Band sampling takes the widest row per band**, which slightly over-reads
   narrow regions. 64 bands keeps that under a centimetre; coarser banding
   over-estimated the waist by about 10%.
