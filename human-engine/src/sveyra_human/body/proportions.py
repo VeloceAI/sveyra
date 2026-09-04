@@ -117,26 +117,45 @@ class ScaledProportions:
 
 
 class LearnedProportions:
-    """Seam for a mapping fitted to scanned bodies.
+    """Proportions from a mapping fitted to measured bodies.
 
-    Not implemented. It exists so the swap is a constructor argument when the
-    dataset licence is settled, rather than a change to how bodies are built.
-
-    See `docs/PROPORTIONS.md` for what a implementation must provide.
+    Carries no dataset. The model is a small coefficients file, so whichever
+    bodies were used to fit it stay outside this repository with their licence.
+    A model fitted on generated bodies is marked synthetic, and
+    `describe()` reports that rather than letting it pass as measurement.
     """
 
     name = "learned"
 
-    def __init__(self, model_path: str | None = None) -> None:
-        self._model_path = model_path
+    def __init__(self, model: object | None = None, model_path: str | None = None) -> None:
+        from sveyra_human.body.learned import ProportionModel
+
+        if model is None and model_path is None:
+            raise ValueError(
+                "LearnedProportions needs a fitted model. Fit one with "
+                "sveyra_human.body.learned.fit_from_table, or pass model_path."
+            )
+        self._model = model if model is not None else ProportionModel.load(str(model_path))
+
+    def describe(self) -> str:
+        return (
+            f"fitted on {self._model.sample_count} bodies "
+            f"({self._model.provenance})"
+        )
 
     def fractions(self, height_cm: float, weight_kg: float | None = None) -> dict[str, float]:
-        raise NotImplementedError(
-            "A learned proportions model is not bundled. The candidate mapping "
-            "(zengyh1900/3D-Human-Body-Shape) is MIT but trains on SPRING, whose "
-            "licence is separate and unverified. Use AnthropometricProportions or "
-            "ScaledProportions until that is resolved."
-        )
+        if height_cm <= 0:
+            raise ValueError("height_cm must be positive")
+        # A body with no weight given still has to produce a body, so fall back
+        # to a mid-normal BMI rather than refusing.
+        weight = weight_kg if weight_kg is not None else 22.0 * (height_cm / 100.0) ** 2
+        predicted = self._model.predict({"height_cm": height_cm, "weight_kg": weight})
+
+        out = dict(_ANTHROPOMETRIC)
+        for field, centimetres in predicted.items():
+            if field in out and centimetres > 0:
+                out[field] = centimetres / height_cm
+        return out
 
 
 DEFAULT_SOURCE: ProportionsSource = AnthropometricProportions()

@@ -1,3 +1,4 @@
+from sveyra_human.body.learned import ProportionModel, evaluate, fit_from_table
 from sveyra_human.body.parameters import BodyParameters
 from sveyra_human.body.proportions import (
     AnthropometricProportions,
@@ -17,6 +18,9 @@ __all__ = [
     "AnthropometricProportions",
     "BodyParameters",
     "LearnedProportions",
+    "ProportionModel",
+    "evaluate",
+    "fit_from_table",
     "ProportionsSource",
     "ScaledProportions",
     "TransformReport",
