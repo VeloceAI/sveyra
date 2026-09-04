@@ -10,6 +10,7 @@ import type {
   PersistedProfile,
   ProfilePersistRequest,
   RecommendationResponse,
+  AvatarBuildResponse,
   RegisterResponse,
   TokenResponse,
   WardrobeItem,
@@ -42,6 +43,29 @@ export async function logout(refreshToken: string) {
     body: { refresh_token: refreshToken },
     auth: false,
   });
+}
+
+export function buildAvatar(
+  heightCm: number,
+  photos: { front: File; side?: File | null; back?: File | null },
+) {
+  const form = new FormData();
+  form.append("height_cm", String(heightCm));
+  form.append("front", photos.front);
+  if (photos.side) form.append("side", photos.side);
+  if (photos.back) form.append("back", photos.back);
+  return apiUpload<AvatarBuildResponse>("/v1/avatar/build", form);
+}
+
+export async function fetchMediaObjectUrl(assetId: string): Promise<string> {
+  // The viewer needs bytes, and an in-memory storage backend has no URL a
+  // browser can follow. Fetching with the session token works for every backend.
+  const { getAccessToken } = await import("@/lib/auth/session");
+  const response = await fetch(`/v1/media/${assetId}/content`, {
+    headers: { Authorization: `Bearer ${getAccessToken() ?? ""}` },
+  });
+  if (!response.ok) throw new Error("Could not download the avatar.");
+  return URL.createObjectURL(await response.blob());
 }
 
 export function getCurrentProfile() {

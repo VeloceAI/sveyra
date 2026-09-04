@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, File, Form, Request, UploadFile
+from fastapi import APIRouter, Depends, File, Form, Request, Response, UploadFile
 from sqlalchemy.orm import Session
 
 from app.auth.deps import get_current_user
@@ -10,6 +10,7 @@ from app.handlers.media_asset_handler import (
     delete_media_asset,
     get_media_asset,
     get_media_asset_access,
+    get_media_asset_bytes,
     upload_media_asset,
 )
 from app.models.user import User
@@ -53,6 +54,19 @@ def read_asset_access(
     user: User = Depends(get_current_user),
 ) -> MediaAssetAccessResponse:
     return get_media_asset_access(asset_id, session, storage, user)
+
+
+@router.get("/{asset_id}/content")
+def read_asset_content(
+    asset_id: UUID,
+    session: Session = Depends(get_db),
+    storage: StoragePort = Depends(get_storage),
+    user: User = Depends(get_current_user),
+) -> Response:
+    payload = get_media_asset_bytes(asset_id, session, storage, user)
+    # GLB is the only binary this serves today; anything else still downloads.
+    media_type = "model/gltf-binary" if payload[:4] == b"glTF" else "application/octet-stream"
+    return Response(content=payload, media_type=media_type)
 
 
 @router.get("/{asset_id}", response_model=MediaAssetResponse)

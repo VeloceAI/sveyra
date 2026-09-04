@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 
 from app.avatar.deps import build_avatar
+from app.avatar.errors import AvatarUnavailableError
 from app.avatar.port import AvatarPort
 from app.core.config import settings
 from app.core.errors import (
@@ -23,6 +24,7 @@ from app.core.errors import (
     WardrobeEmptyError,
     WardrobeItemNotFoundError,
     WardrobeMediaMissingError,
+    avatar_unavailable_handler,
     body_profile_not_found_handler,
     email_already_registered_handler,
     empty_media_upload_handler,
@@ -48,6 +50,7 @@ from app.core.errors import (
 )
 from app.core.rate_limit import SlidingWindowRateLimiter
 from app.routes.auth_routes import router as auth_router
+from app.routes.avatar_routes import router as avatar_router
 from app.routes.body_profile_routes import router as body_profile_router
 from app.routes.health_routes import router as health_router
 from app.routes.media_asset_routes import router as media_asset_router
@@ -77,7 +80,7 @@ def create_app(
     app.state.storage = storage if storage is not None else build_storage()
     app.state.vision = vision if vision is not None else build_vision()
     app.state.stylist = stylist if stylist is not None else build_stylist()
-    app.state.avatar = avatar if avatar is not None else build_avatar()
+    app.state.avatar = avatar if avatar is not None else build_avatar(app.state.storage)
     app.state.auth_limiter = SlidingWindowRateLimiter(
         max_requests=settings.auth_rate_limit_max_requests,
         window_seconds=settings.auth_rate_limit_window_seconds,
@@ -106,8 +109,10 @@ def create_app(
     app.add_exception_handler(WardrobeMediaMissingError, wardrobe_media_missing_handler)
     app.add_exception_handler(VisionUnavailableError, vision_unavailable_handler)
     app.add_exception_handler(RateLimitExceededError, rate_limit_exceeded_handler)
+    app.add_exception_handler(AvatarUnavailableError, avatar_unavailable_handler)
     app.include_router(health_router)
     app.include_router(auth_router, prefix="/v1")
+    app.include_router(avatar_router, prefix="/v1")
     app.include_router(profile_router, prefix="/v1")
     app.include_router(body_profile_router, prefix="/v1")
     app.include_router(wardrobe_router, prefix="/v1")

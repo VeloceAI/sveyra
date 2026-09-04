@@ -129,3 +129,13 @@ export type OutfitCreateRequest = {
   item_ids: string[];
   rationale: Record<string, unknown>;
 };
+
+export type AvatarBuildResponse = {
+  asset_id: string;
+  backend: string;
+  source_views: number;
+  measurements: Record<string, number>;
+  body_parameters: Record<string, number | null>;
+  confidence: { overall: number; views: Record<string, number>; warnings: string[] };
+  profiling_ms: Record<string, number>;
+};

@@ -81,6 +81,18 @@ class MediaAssetService:
         session.refresh(asset)
         return self._to_response(asset)
 
+    def register_reference(self, session: Session, user_id: UUID, reference: str) -> MediaAsset:
+        """Record a reference this server created, such as a generated avatar.
+
+        Distinct from create_asset, which takes a reference from the client and
+        must therefore refuse one that is already claimed. Here the server is
+        the source of the reference, so there is nothing to guard against.
+        """
+        asset = self.repository.create_asset(session, user_id, reference, None)
+        session.commit()
+        session.refresh(asset)
+        return asset
+
     def get_asset(
         self, session: Session, asset_id: UUID, user_id: UUID
     ) -> MediaAssetResponse:
@@ -101,6 +113,21 @@ class MediaAssetService:
         except StorageObjectNotFoundError:
             raise StorageUnavailableError
         return MediaAssetAccessResponse(url=url)
+
+    def get_asset_bytes(self, session: Session, asset_id: UUID, user_id: UUID) -> bytes:
+        """Owned bytes, for clients that must fetch the object itself.
+
+        A signed URL is preferable where the storage backend can mint one, but a
+        browser still has to load a GLB, and the in-memory adapter has no URL a
+        browser can follow. Ownership is checked exactly as it is everywhere else.
+        """
+        if self.storage is None:
+            raise RuntimeError("StoragePort is required to read bytes.")
+        asset = self._get_owned_asset(session, asset_id, user_id)
+        try:
+            return self.storage.get(asset.reference)
+        except StorageObjectNotFoundError:
+            raise StorageUnavailableError
 
     def delete_asset(self, session: Session, asset_id: UUID, user_id: UUID) -> None:
         if self.storage is None:

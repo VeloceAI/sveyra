@@ -70,6 +70,12 @@ def get_media_asset_access(
     return service.get_asset_access_url(session, asset_id, user.id)
 
 
+def get_media_asset_bytes(
+    asset_id: UUID, session: Session, storage: StoragePort, user: User
+) -> bytes:
+    return MediaAssetService(storage=storage).get_asset_bytes(session, asset_id, user.id)
+
+
 async def upload_media_asset(
     file: UploadFile,
     wardrobe_item_id: UUID | None,
