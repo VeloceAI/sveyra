@@ -8,7 +8,7 @@ from app.avatar.port import AvatarPort
 from app.core.config import settings
 from app.core.errors import MediaUploadTooLargeError
 from app.models.user import User
-from app.schemas.avatar_schema import AvatarBuildResponse
+from app.schemas.avatar_schema import AvatarBuildResponse, CaptureCheckResponse
 from app.services.media_asset_service import MediaAssetService
 from app.storage.port import StoragePort
 
@@ -53,6 +53,31 @@ async def build_avatar_from_photos(
         body_parameters=report.get("body_parameters", {}),
         confidence=report.get("confidence", {}),
         profiling_ms=report.get("profiling_ms", {}),
+    )
+
+
+async def check_capture(
+    files: dict[str, UploadFile | None], avatar: AvatarPort
+) -> CaptureCheckResponse:
+    if not hasattr(avatar, "check_photos"):
+        raise AvatarUnavailableError(
+            "The configured avatar backend cannot check photographs. "
+            "Set AVATAR_BACKEND=sveyra."
+        )
+    photos: dict[str, bytes] = {}
+    for view in _VIEWS:
+        upload = files.get(view)
+        if upload is None:
+            continue
+        data = await _read_bounded(upload)
+        if data:
+            photos[view] = data
+
+    report = avatar.check_photos(photos)  # type: ignore[attr-defined]
+    return CaptureCheckResponse(
+        ready=bool(report["ready"]),
+        views=report["views"],
+        overall=list(report["overall"]),
     )
 
 

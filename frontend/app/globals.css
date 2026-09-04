@@ -277,3 +277,13 @@ button:disabled {
 }
 .usage { margin-top: 28px; }
 .usage ul { padding-left: 20px; }
+
+
+/* Capture guidance */
+.capture-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.capture-guidance { margin: 18px 0; padding: 14px 16px; border: 1px solid currentColor; border-radius: 8px; }
+.capture-guidance h2 { margin: 0 0 10px; font-size: 16px; }
+.capture-view { margin-bottom: 10px; }
+.capture-view ul { margin: 4px 0 0; padding-left: 20px; }
+.capture-view li.blocking { font-weight: 600; }
+.capture-view li.advisory { opacity: 0.8; }

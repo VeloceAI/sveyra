@@ -5,9 +5,9 @@ from app.auth.deps import get_current_user
 from app.avatar.deps import get_avatar
 from app.avatar.port import AvatarPort
 from app.db.session import get_db
-from app.handlers.avatar_handler import build_avatar_from_photos
+from app.handlers.avatar_handler import build_avatar_from_photos, check_capture
 from app.models.user import User
-from app.schemas.avatar_schema import AvatarBuildResponse
+from app.schemas.avatar_schema import AvatarBuildResponse, CaptureCheckResponse
 from app.storage.deps import get_storage
 from app.storage.port import StoragePort
 
@@ -33,3 +33,15 @@ async def build(
         avatar,
         storage,
     )
+
+
+@router.post("/check", response_model=CaptureCheckResponse)
+async def check(
+    front: UploadFile = File(...),
+    side: UploadFile | None = File(None),
+    back: UploadFile | None = File(None),
+    user: User = Depends(get_current_user),
+    avatar: AvatarPort = Depends(get_avatar),
+) -> CaptureCheckResponse:
+    """Tell someone what to fix before they pay for a reconstruction."""
+    return await check_capture({"front": front, "side": side, "back": back}, avatar)
