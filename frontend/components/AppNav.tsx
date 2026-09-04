@@ -13,6 +13,7 @@ const LINKS = [
   { href: "/recommend", label: "Recommend" },
   { href: "/gaps", label: "Gaps" },
   { href: "/outfits", label: "Outfits" },
+  { href: "/calendar", label: "Calendar" },
 ];
 
 export function AppNav() {
