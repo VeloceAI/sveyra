@@ -139,3 +139,25 @@ export type AvatarBuildResponse = {
   confidence: { overall: number; views: Record<string, number>; warnings: string[] };
   profiling_ms: Record<string, number>;
 };
+
+export type GapCategory = "top" | "bottom" | "shoes";
+
+export type WardrobeGap = {
+  category: GapCategory;
+  priority: "high";
+  reason: string;
+};
+
+export type GapResponse = { gaps: WardrobeGap[] };
+
+export type ShoppingProduct = {
+  id: string;
+  name: string;
+  brand: string;
+  price: number;
+  url: string;
+  category: GapCategory;
+  image_url: string | null;
+};
+
+export type ShoppingResponse = { products: ShoppingProduct[] };
