@@ -4,6 +4,56 @@ Newest first.
 
 ---
 
+## Topology contract and body transformation
+
+### A limitation that turned out not to exist
+
+STATUS claimed topology was not yet consistent across users and that this
+blocked garment transfer. Measured before building anything on top of it: a
+150 cm body and a 205 cm one produce identical vertex counts, identical face
+arrays and identical UVs. The guarantee was already there.
+
+Corrected the claim, and locked it in with `test_topology_contract.py`, since
+nothing guarded a property this much depends on. Changing a cage resolution
+constant is now a visible breaking change rather than a silent one.
+
+While writing it, one assertion failed at 86 percent: vertex correspondence
+checked by which *bone* a vertex binds to. Distance-based weights shift at part
+boundaries when proportions change, so a shoulder vertex can bind to the chest
+on one body and the arm on another. Bone binding was the wrong proxy. The exact
+guarantee is which cage *part* a vertex came from, which `vertex_part_map`
+exposes and which holds perfectly. The 86 percent figure is now its own test,
+documenting a real limit rather than asserting a guarantee that does not hold.
+
+### Transformation, because an avatar is parameters
+
+"Show me twelve kilos lighter" is arithmetic on a parameter set, not a new
+reconstruction. The photographs are never needed again, and because topology is
+fixed the result is morph-compatible: a garment fitted to one body fits the
+other.
+
+Transforms are anatomical rather than uniform scaling. Losing weight takes from
+the waist first, barely touches the ribcage, and leaves shoulder width, limb
+lengths and height untouched, because losing weight does not narrow a shoulder.
+Muscle does the opposite: it broadens shoulders and limbs and narrows nothing.
+
+First calibration was wrong by roughly double. 12 kg lost moved waist girth by
+24 cm, where a real body moves about 12. The per-kilogram figure applies to
+waist *width*, which feeds a superellipse perimeter and gets amplified about
+threefold, so the width figure has to be well under the girth figure. Recalibrated
+to land on 1 cm of girth per kilogram across the whole range.
+
+### Verification
+
+- 257 tests pass, ruff clean
+- Rendered silhouettes confirm muscle produces a visibly different shape from
+  weight, not a uniformly scaled one
+- Skeleton, height and limb lengths provably untouched by weight change
+- Extreme loss cannot shrink a body past a floor
+- Transformed bodies stay morph-compatible with the original
+
+---
+
 ## Phases 4 and 6 - Face and hair
 
 The last two phases. Every stage in the original plan is now implemented, and a
