@@ -57,9 +57,10 @@ def test_the_source_is_behaviour_not_data() -> None:
     assert BodyParameters.from_dict(stored).waist_width == body.waist_width
 
 
-def test_the_learned_source_refuses_rather_than_inventing_one() -> None:
-    with pytest.raises(NotImplementedError, match="SPRING"):
-        LearnedProportions().fractions(178.0)
+def test_the_learned_source_refuses_without_a_fitted_model() -> None:
+    """Implemented now, but it will not invent coefficients it was never given."""
+    with pytest.raises(ValueError, match="fitted model"):
+        LearnedProportions()
 
 
 @pytest.mark.parametrize("source", [AnthropometricProportions(), ScaledProportions()])
