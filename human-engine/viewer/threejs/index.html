@@ -1,257 +1,270 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>SVEYRA Human Engine - Debug Viewer</title>
+<title>SVEYRA Human Engine</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+
 <style>
+  /* Committed dark stage: this is a model viewer, and the mesh is the subject.
+     Every colour is painted explicitly so the page holds on any host ground. */
   :root {
-    --bg: #14161c; --panel: #1e222b; --line: #2c3240;
-    --text: #e6e9f2; --muted: #98a0b3; --accent: #7f9cf5;
+    --void:    #14100D;
+    --stage:   #1A1613;
+    --panel:   #1F1A15;
+    --raised:  #29221B;
+    --line:    #382E24;
+    --text:    #F0E6DA;
+    --muted:   #A2917E;
+    --clay:    #E0A46B;
+    --measure: #C99A63;
+    --ok:      #7BC49A;
+
+    --sans: "IBM Plex Sans", ui-sans-serif, system-ui, "Segoe UI", sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
   }
+
   * { box-sizing: border-box; }
-  html, body { height: 100%; margin: 0; }
+
   body {
-    background: var(--bg); color: var(--text);
-    font: 13px/1.5 ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif;
+    margin: 0;
+    background: var(--void);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
     overflow: hidden;
   }
-  #stage { position: fixed; inset: 0; }
-  #panel {
-    position: fixed; top: 16px; left: 16px; width: 250px;
-    background: color-mix(in srgb, var(--panel) 92%, transparent);
-    border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px;
-    backdrop-filter: blur(8px);
+
+  #stage { position: fixed; inset: 0; background: var(--stage); }
+  canvas { display: block; }
+
+  /* ---------- masthead ---------- */
+
+  header {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    padding: 14px 20px;
+    background: linear-gradient(to bottom, rgba(20,16,13,.92), rgba(20,16,13,0));
+    pointer-events: none;
+    z-index: 3;
   }
-  h1 { margin: 0 0 2px; font-size: 14px; letter-spacing: -0.01em; }
-  .sub { margin: 0 0 12px; color: var(--muted); font-size: 11.5px; }
-  label { display: flex; align-items: center; gap: 8px; padding: 3px 0; cursor: pointer; }
-  input[type=checkbox] { accent-color: var(--accent); }
-  .file {
-    display: block; width: 100%; margin: 4px 0 12px; padding: 7px 8px;
-    background: #171a22; border: 1px solid var(--line); border-radius: 6px;
-    color: var(--text); font-size: 12px;
+  header h1 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
   }
-  hr { border: 0; border-top: 1px solid var(--line); margin: 12px 0; }
-  #stats { color: var(--muted); font-size: 11.5px; white-space: pre-line; }
-  #err { color: #f2a2a2; font-size: 11.5px; margin-top: 8px; }
-  kbd {
-    background: #171a22; border: 1px solid var(--line); border-bottom-width: 2px;
-    border-radius: 4px; padding: 0 4px; font-size: 11px;
+  header .sub {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.03em;
+  }
+
+  /* ---------- panels ---------- */
+
+  .panel {
+    position: fixed;
+    background: color-mix(in srgb, var(--panel) 94%, transparent);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 16px;
+    backdrop-filter: blur(10px);
+    z-index: 4;
+  }
+
+  #controls { top: 62px; left: 20px; width: 236px; }
+  #readout  { top: 62px; right: 20px; width: 232px; }
+
+  .panel h2 {
+    margin: 0 0 10px;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .variants { display: flex; flex-direction: column; gap: 5px; }
+
+  .variant {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 8px 10px;
+    background: var(--raised);
+    border: 1px solid transparent;
+    border-radius: 6px;
+    color: var(--text);
+    font: inherit;
+    font-size: 13px;
+    text-align: left;
+    cursor: pointer;
+  }
+  .variant:hover { border-color: var(--line); }
+  .variant[aria-pressed="true"] {
+    border-color: var(--clay);
+    background: color-mix(in srgb, var(--clay) 14%, var(--raised));
+  }
+  .variant .delta {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    color: var(--muted);
+  }
+  .variant[aria-pressed="true"] .delta { color: var(--clay); }
+
+  .blend { margin-top: 14px; }
+  .blend label {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 7px;
+  }
+  .blend .amount { color: var(--clay); }
+  input[type="range"] { width: 100%; accent-color: var(--clay); }
+
+  .toggles {
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid var(--line);
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+  }
+  .toggles label {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  input[type="checkbox"] { accent-color: var(--measure); }
+
+  /* ---------- measurements ---------- */
+
+  .rows { display: flex; flex-direction: column; }
+  .row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 10px;
+    padding: 5px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .row:last-child { border-bottom: 0; }
+  .row .name { color: var(--muted); font-size: 12.5px; }
+  .row .value {
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 13px;
+    color: var(--text);
+  }
+  .row .value .unit { color: var(--muted); font-size: 11px; margin-left: 2px; }
+  .row.changed .value { color: var(--clay); }
+
+  .note {
+    margin: 12px 0 0;
+    font-size: 11.5px;
+    line-height: 1.45;
+    color: var(--muted);
+  }
+
+  /* ---------- footer ---------- */
+
+  footer {
+    position: fixed;
+    left: 20px; bottom: 16px;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    color: var(--muted);
+    letter-spacing: 0.04em;
+    z-index: 3;
+  }
+  footer b { color: var(--ok); font-weight: 500; }
+
+  #hint {
+    position: fixed;
+    right: 20px; bottom: 16px;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    color: var(--muted);
+    z-index: 3;
+  }
+
+  @media (max-width: 780px) {
+    #controls, #readout {
+      position: static;
+      width: auto;
+      margin: 0 12px 12px;
+    }
+    body { overflow: auto; }
+    #stage { position: relative; height: 58vh; inset: auto; }
+    header { position: static; background: none; }
+    footer, #hint { position: static; margin: 0 12px 14px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
   }
 </style>
-</head>
-<body>
+
 <div id="stage"></div>
 
-<div id="panel">
+<header>
   <h1>SVEYRA Human Engine</h1>
-  <p class="sub">Debug viewer &middot; v0.1</p>
+  <span class="sub">3,528 vertices · 6,768 triangles · built on CPU</span>
+</header>
 
-  <input class="file" type="file" id="pick" accept=".glb,.gltf">
+<section class="panel" id="controls">
+  <h2>Body</h2>
+  <div class="variants" id="variants"></div>
 
-  <label><input type="checkbox" id="wire"> Wireframe</label>
-  <label><input type="checkbox" id="normals"> Normals</label>
-  <label><input type="checkbox" id="grid" checked> Ground grid</label>
-  <label><input type="checkbox" id="axes"> Axes</label>
-  <label><input type="checkbox" id="skeleton"> Skeleton</label>
-  <label><input type="checkbox" id="pose"> Wave (test the rig)</label>
-  <label><input type="checkbox" id="spin"> Auto-rotate</label>
-
-  <hr>
-  <div id="stats">No model loaded.</div>
-  <div id="err"></div>
-  <hr>
-  <div class="sub" style="margin:0">
-    Drag to orbit &middot; scroll to zoom<br>
-    <kbd>R</kbd> reset view
+  <div class="blend">
+    <label for="blend">
+      <span>Blend</span>
+      <span class="amount" id="blend-amount">100%</span>
+    </label>
+    <input type="range" id="blend" min="0" max="100" value="100">
   </div>
-</div>
 
-<script type="importmap">
-{
-  "imports": {
-    "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
-    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
-  }
-}
+  <div class="toggles">
+    <label><input type="checkbox" id="wire"> Wireframe</label>
+    <label><input type="checkbox" id="bones"> Skeleton</label>
+    <label><input type="checkbox" id="spin"> Turntable</label>
+    <button type="button" class="variant" id="reset" style="margin-top:8px"><span>Reset pose</span><span class="delta">T-pose</span></button>
+    <button type="button" class="variant" id="reset" style="margin-top:8px"><span>Reset pose</span><span class="delta">T-pose</span></button>
+  </div>
+</section>
+
+<section class="panel" id="readout">
+  <h2>Measurements</h2>
+  <div class="rows" id="rows"></div>
+  <p class="note" id="note"></p>
+</section>
+
+<footer>Every body shares one topology &middot; <b>morph-compatible</b></footer>
+<div id="hint">drag to orbit &middot; show the skeleton, then drag a joint to pose</div>
+
+<!-- Generated by tools/export_viewer_data.py; not committed, it is build output. -->
+<script type="application/json" id="avatar-data" src="avatar_data.json"></script>
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+fetch("avatar_data.json").then(function (r) { return r.text(); }).then(function (text) {
+  document.getElementById("avatar-data").textContent = text;
+  const s = document.createElement("script");
+  s.src = "viewer.js";
+  document.body.appendChild(s);
+});
 </script>
-
-<script type="module">
-import * as THREE from "three";
-import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
-import { VertexNormalsHelper } from "three/addons/helpers/VertexNormalsHelper.js";
-
-const stage = document.getElementById("stage");
-const statsEl = document.getElementById("stats");
-const errEl = document.getElementById("err");
-
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x14161c);
-
-const camera = new THREE.PerspectiveCamera(38, 1, 0.01, 100);
-const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-stage.appendChild(renderer.domElement);
-
-const controls = new OrbitControls(camera, renderer.domElement);
-controls.enableDamping = true;
-
-scene.add(new THREE.HemisphereLight(0xdfe6ff, 0x1a1d25, 2.0));
-const key = new THREE.DirectionalLight(0xffffff, 2.2);
-key.position.set(2, 3, 2.5);
-scene.add(key);
-const fill = new THREE.DirectionalLight(0x93a8ff, 0.7);
-fill.position.set(-2.5, 1, -2);
-scene.add(fill);
-
-const grid = new THREE.GridHelper(4, 20, 0x3a4152, 0x272c38);
-scene.add(grid);
-const axes = new THREE.AxesHelper(0.5);
-axes.visible = false;
-scene.add(axes);
-
-let current = null;
-let normalsHelper = null;
-let skeletonHelper = null;
-let skinnedMesh = null;
-let armBone = null;
-
-function frame(object) {
-  const box = new THREE.Box3().setFromObject(object);
-  const size = box.getSize(new THREE.Vector3());
-  const centre = box.getCenter(new THREE.Vector3());
-  const radius = Math.max(size.x, size.y, size.z);
-  controls.target.set(centre.x, centre.y, centre.z);
-  camera.position.set(centre.x + radius * 0.9, centre.y + radius * 0.15, centre.z + radius * 2.0);
-  camera.near = radius / 100;
-  camera.far = radius * 100;
-  camera.updateProjectionMatrix();
-  controls.update();
-  return { size, box };
-}
-
-function describe(object, size) {
-  let verts = 0, tris = 0;
-  object.traverse((child) => {
-    if (!child.isMesh) return;
-    const g = child.geometry;
-    verts += g.attributes.position.count;
-    tris += (g.index ? g.index.count : g.attributes.position.count) / 3;
-  });
-  statsEl.textContent =
-    `vertices   ${verts.toLocaleString()}\n` +
-    `triangles  ${Math.round(tris).toLocaleString()}\n` +
-    `height     ${(size.y * 100).toFixed(1)} cm\n` +
-    `width      ${(size.x * 100).toFixed(1)} cm\n` +
-    `depth      ${(size.z * 100).toFixed(1)} cm`;
-}
-
-function clear() {
-  if (!current) return;
-  scene.remove(current);
-  if (skeletonHelper) { scene.remove(skeletonHelper); skeletonHelper = null; }
-  current.traverse((c) => {
-    if (c.isMesh) { c.geometry.dispose(); c.material.dispose(); }
-  });
-  current = null;
-  if (normalsHelper) { scene.remove(normalsHelper); normalsHelper = null; }
-}
-
-function load(url) {
-  errEl.textContent = "";
-  new GLTFLoader().load(url, (gltf) => {
-    clear();
-    current = gltf.scene;
-    scene.add(current);
-
-    skinnedMesh = null;
-    armBone = null;
-    current.traverse((c) => {
-      if (c.isSkinnedMesh && !skinnedMesh) skinnedMesh = c;
-      if (c.isBone && c.name === "upperarm_L") armBone = c;
-    });
-    if (skinnedMesh) {
-      skeletonHelper = new THREE.SkeletonHelper(current);
-      skeletonHelper.visible = document.getElementById("skeleton").checked;
-      scene.add(skeletonHelper);
-    }
-    const { size } = frame(current);
-    describe(current, size);
-    applyToggles();
-  }, undefined, (e) => {
-    errEl.textContent = "Could not load that file. " + (e?.message ?? "");
-  });
-}
-
-function applyToggles() {
-  if (!current) return;
-  const wire = document.getElementById("wire").checked;
-  current.traverse((c) => { if (c.isMesh) c.material.wireframe = wire; });
-
-  const wantNormals = document.getElementById("normals").checked;
-  if (wantNormals && !normalsHelper) {
-    current.traverse((c) => {
-      if (c.isMesh && !normalsHelper) {
-        normalsHelper = new VertexNormalsHelper(c, 0.02, 0x7f9cf5);
-        scene.add(normalsHelper);
-      }
-    });
-  } else if (!wantNormals && normalsHelper) {
-    scene.remove(normalsHelper);
-    normalsHelper = null;
-  }
-}
-
-for (const id of ["wire", "normals"]) {
-  document.getElementById(id).addEventListener("change", applyToggles);
-}
-document.getElementById("grid").addEventListener("change", (e) => {
-  grid.visible = e.target.checked;
-});
-document.getElementById("skeleton").addEventListener("change", (e) => {
-  if (skeletonHelper) skeletonHelper.visible = e.target.checked;
-});
-document.getElementById("axes").addEventListener("change", (e) => {
-  axes.visible = e.target.checked;
-});
-document.getElementById("spin").addEventListener("change", (e) => {
-  controls.autoRotate = e.target.checked;
-});
-document.getElementById("pick").addEventListener("change", (e) => {
-  const file = e.target.files?.[0];
-  if (file) load(URL.createObjectURL(file));
-});
-addEventListener("keydown", (e) => {
-  if (e.key.toLowerCase() === "r" && current) frame(current);
-});
-
-function resize() {
-  const w = innerWidth, h = innerHeight;
-  renderer.setSize(w, h);
-  camera.aspect = w / h;
-  camera.updateProjectionMatrix();
-}
-addEventListener("resize", resize);
-resize();
-
-// Load ./avatar.glb if one has been placed next to this file.
-fetch("avatar.glb", { method: "HEAD" })
-  .then((r) => { if (r.ok) load("avatar.glb"); })
-  .catch(() => {});
-
-// A crude arm wave, purely to prove the skin weights actually deform the mesh.
-const clock = new THREE.Clock();
-(function tick() {
-  requestAnimationFrame(tick);
-  if (armBone) {
-    const on = document.getElementById("pose").checked;
-    armBone.rotation.z = on ? Math.sin(clock.getElapsedTime() * 2) * 0.6 : 0;
-  }
-  controls.update();
-  renderer.render(scene, camera);
-})();
-</script>
-</body>
-</html>
