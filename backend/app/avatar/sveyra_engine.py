@@ -71,6 +71,29 @@ class SveyraEngineAvatar(AvatarPort):
             "source_views": artifact.source_views,
         }
 
+    def check_photos(self, photos: dict[str, bytes]) -> dict[str, object]:
+        """Judge photographs without building anything.
+
+        Separate from build_from_photos because a person adjusting their framing
+        should not pay for a reconstruction on every attempt.
+        """
+        from sveyra_human.capture import guide_capture, load_image, overall_guidance
+        from sveyra_human.vision import BackgroundContrastSegmenter, silhouette_from_segmentation
+
+        segmenter = BackgroundContrastSegmenter()
+        results = {}
+        for view, payload in photos.items():
+            image = load_image(payload)
+            segmented = segmenter.segment(image)
+            mask = silhouette_from_segmentation(segmented)
+            results[view] = guide_capture(view, image, mask, segmented.confidence)
+
+        return {
+            "views": {view: g.to_dict() for view, g in results.items()},
+            "overall": overall_guidance(results),
+            "ready": all(g.usable for g in results.values()) and "front" in results,
+        }
+
     def _store(self, artifact: object) -> str:
         import tempfile
         from pathlib import Path

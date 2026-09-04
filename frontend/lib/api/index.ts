@@ -11,6 +11,7 @@ import type {
   ProfilePersistRequest,
   RecommendationResponse,
   AvatarBuildResponse,
+  CaptureCheckResponse,
   GapResponse,
   WardrobeUsageResponse,
   WearLog,
@@ -110,6 +111,14 @@ export function getShoppingRecommendations() {
     method: "POST",
     body: {},
   });
+}
+
+export function checkCapture(photos: { front: File; side?: File | null; back?: File | null }) {
+  const form = new FormData();
+  form.append("front", photos.front);
+  if (photos.side) form.append("side", photos.side);
+  if (photos.back) form.append("back", photos.back);
+  return apiUpload<CaptureCheckResponse>("/v1/avatar/check", form);
 }
 
 export function getCurrentProfile() {

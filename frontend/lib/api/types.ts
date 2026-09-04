@@ -185,3 +185,22 @@ export type WardrobeUsageResponse = {
   never_worn_item_ids: string[];
   logged_days: number;
 };
+
+export type CaptureInstruction = {
+  severity: "blocking" | "advisory";
+  message: string;
+  code: string;
+};
+
+export type CaptureViewGuidance = {
+  view: string;
+  usable: boolean;
+  framing_score: number;
+  instructions: CaptureInstruction[];
+};
+
+export type CaptureCheckResponse = {
+  ready: boolean;
+  views: Record<string, CaptureViewGuidance>;
+  overall: string[];
+};

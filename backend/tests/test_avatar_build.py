@@ -157,3 +157,51 @@ def test_the_stub_backend_admits_it_cannot_do_this(client: TestClient) -> None:
     )
     assert response.status_code == 503
     assert response.json()["error"]["code"] == "avatar_unavailable"
+
+
+def test_a_good_photo_is_reported_ready(engine_client: TestClient) -> None:
+    _user_id, headers = register_and_auth(engine_client, "check-ok@example.com")
+    response = engine_client.post(
+        "/v1/avatar/check",
+        headers=headers,
+        files={"front": ("front.png", photo_bytes("front"), "image/png")},
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["ready"] is True
+    assert body["views"]["front"]["usable"] is True
+
+
+def test_a_bad_photo_says_what_to_change(engine_client: TestClient) -> None:
+    """The point of the endpoint: an instruction, not a diagnosis."""
+    _user_id, headers = register_and_auth(engine_client, "check-bad@example.com")
+    buffer = io.BytesIO()
+    Image.fromarray(np.full((350, 220, 3), 200, dtype=np.uint8)).save(buffer, format="PNG")
+
+    body = engine_client.post(
+        "/v1/avatar/check",
+        headers=headers,
+        files={"front": ("flat.png", buffer.getvalue(), "image/png")},
+    ).json()
+
+    assert body["ready"] is False
+    instructions = body["views"]["front"]["instructions"]
+    assert instructions
+    assert any(i["severity"] == "blocking" for i in instructions)
+
+
+def test_a_missing_side_view_is_advised(engine_client: TestClient) -> None:
+    _user_id, headers = register_and_auth(engine_client, "check-side@example.com")
+    body = engine_client.post(
+        "/v1/avatar/check",
+        headers=headers,
+        files={"front": ("front.png", photo_bytes("front"), "image/png")},
+    ).json()
+    assert any("side photo" in m for m in body["overall"])
+
+
+def test_checking_requires_authentication(engine_client: TestClient) -> None:
+    response = engine_client.post(
+        "/v1/avatar/check", files={"front": ("front.png", photo_bytes(), "image/png")}
+    )
+    assert response.status_code == 401

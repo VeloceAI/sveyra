@@ -3,9 +3,9 @@
 import { useState } from "react";
 import AvatarViewer from "@/components/AvatarViewer";
 import { ErrorBanner } from "@/components/ErrorBanner";
-import { buildAvatar, fetchMediaObjectUrl } from "@/lib/api";
+import { buildAvatar, checkCapture, fetchMediaObjectUrl } from "@/lib/api";
 import { formatApiError } from "@/lib/api/client";
-import type { AvatarBuildResponse } from "@/lib/api/types";
+import type { AvatarBuildResponse, CaptureCheckResponse } from "@/lib/api/types";
 
 const VIEWS = [
   { key: "front", label: "Front", required: true },
@@ -22,6 +22,27 @@ export default function AvatarPage() {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<AvatarBuildResponse | null>(null);
   const [modelUrl, setModelUrl] = useState<string | null>(null);
+  const [guidance, setGuidance] = useState<CaptureCheckResponse | null>(null);
+  const [checking, setChecking] = useState(false);
+
+  async function onCheck() {
+    const front = files.front;
+    if (!front) {
+      setError("Add a front photo first.");
+      return;
+    }
+    setChecking(true);
+    setError(null);
+    try {
+      // Checking is deliberately separate from building: someone adjusting
+      // their framing should not pay for a reconstruction each attempt.
+      setGuidance(await checkCapture({ front, side: files.side, back: files.back }));
+    } catch (caught) {
+      setError(formatApiError(caught));
+    } finally {
+      setChecking(false);
+    }
+  }
 
   async function onBuild(event: React.FormEvent) {
     event.preventDefault();
@@ -98,10 +119,40 @@ export default function AvatarPage() {
           ))}
         </div>
 
-        <button type="submit" disabled={busy}>
-          {busy ? "Building…" : "Build my avatar"}
-        </button>
+        <div className="capture-actions">
+          <button type="button" className="secondary" onClick={() => void onCheck()} disabled={checking}>
+            {checking ? "Checking…" : "Check my photos"}
+          </button>
+          <button type="submit" disabled={busy}>
+            {busy ? "Building…" : "Build my avatar"}
+          </button>
+        </div>
       </form>
+
+      {guidance && (
+        <div className="capture-guidance">
+          <h2>{guidance.ready ? "Ready to build" : "Fix these first"}</h2>
+          {Object.entries(guidance.views).map(([view, report]) => (
+            <div key={view} className="capture-view">
+              <strong>{view}</strong>
+              {report.instructions.length === 0 ? (
+                <span className="muted"> — looks good</span>
+              ) : (
+                <ul>
+                  {report.instructions.map((instruction) => (
+                    <li key={instruction.code} className={instruction.severity}>
+                      {instruction.message}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          ))}
+          {guidance.overall.map((message) => (
+            <p key={message} className="muted">{message}</p>
+          ))}
+        </div>
+      )}
 
       <AvatarViewer url={modelUrl} />
 

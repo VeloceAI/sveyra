@@ -13,3 +13,11 @@ class AvatarBuildResponse(BaseModel):
     body_parameters: dict[str, Any]
     confidence: dict[str, Any]
     profiling_ms: dict[str, Any]
+
+
+class CaptureCheckResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    ready: bool
+    views: dict[str, Any]
+    overall: list[str]
