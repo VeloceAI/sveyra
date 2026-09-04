@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Iterator
 
 import numpy as np
 
-from sveyra_human.api.errors import NotImplementedYetError, ReconstructionError
+from sveyra_human.api.errors import ReconstructionError
 from sveyra_human.api.models import SUBDIVISIONS, AvatarArtifact, AvatarBuildRequest, QualityReport
 from sveyra_human.body.anatomy import measurements
 from sveyra_human.body.cage import BodyCage, build_cage
@@ -27,6 +27,7 @@ from sveyra_human.vision.silhouette import silhouette_from_segmentation
 
 if TYPE_CHECKING:
     from sveyra_human.capture.validator import CaptureReport
+    from sveyra_human.face.parameters import FaceParameters
 
 
 class SveyraHumanEngine:
@@ -138,8 +139,32 @@ class SveyraHumanEngine:
                     self._view_confidence[view] = result.confidence
         return masks, report
 
-    def fit_face(self, *_args: object, **_kwargs: object) -> None:
-        raise NotImplementedYetError("Face fitting lands in Phase 4.")
+    def fit_face(
+        self, landmarks: object, face_length_cm: float | None = None
+    ) -> "FaceParameters":
+        """Recover face parameters from detected landmarks.
+
+        Takes landmarks rather than an image, for the same reason fitting takes
+        masks: detecting them is a separate, replaceable concern.
+        """
+        from sveyra_human.face import fit_face_parameters
+
+        with self._timed("face"):
+            return fit_face_parameters(
+                landmarks,  # type: ignore[arg-type]
+                face_length_cm=face_length_cm,
+            )
+
+    def shape_head(
+        self, cage: BodyCage, params: BodyParameters, face: "FaceParameters"
+    ) -> BodyCage:
+        """Apply a fitted face to the head cage, leaving every other part alone."""
+        from sveyra_human.body.cage import BodyCage as Cage
+        from sveyra_human.face import apply_face_shape
+
+        chin = params.level_cm("neck") + float(params.neck_length)
+        shaped = apply_face_shape(cage.part("head"), face, chin, float(params.height))
+        return Cage(parts=[shaped if p.name == "head" else p for p in cage.parts])
 
     def generate_texture(
         self,
@@ -159,8 +184,29 @@ class SveyraHumanEngine:
                 mesh, mesh.uv, photographs, cameras, resolution=resolution  # type: ignore[arg-type]
             )
 
-    def build_hair(self, *_args: object, **_kwargs: object) -> None:
-        raise NotImplementedYetError("Hair volumes land in Phase 6.")
+    def build_hair(
+        self,
+        cage: BodyCage,
+        image: object,
+        person_mask: object,
+        pixels_per_cm: float,
+    ) -> object:
+        """Reconstruct hair volumes over the fitted skull.
+
+        Returns an empty hairstyle rather than a default one when the
+        photograph does not show hair: a bald avatar is visibly wrong and
+        therefore honest, where invented hair is not.
+        """
+        import numpy as _np
+
+        from sveyra_human.hair import Hairstyle, build_hairstyle, measure_thickness, segment_hair
+
+        with self._timed("hair"):
+            hair = segment_hair(_np.asarray(image), _np.asarray(person_mask))
+            if hair.confidence < 0.2 or not hair.mask.any():
+                return Hairstyle(volumes=[], source="none-detected")
+            thickness = measure_thickness(hair.mask, _np.asarray(person_mask), pixels_per_cm)
+            return build_hairstyle(cage.part("head"), thickness)
 
     # -- entry points ---------------------------------------------------
 
