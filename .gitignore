@@ -20,3 +20,8 @@ gcp-credentials.json
 
 # Python editable-install metadata
 *.egg-info/
+
+# Viewer build output and downloaded test photographs. Regenerate with
+# tools/export_viewer_data.py; the photographs are fetched, not authored here.
+human-engine/viewer/threejs/avatar_data.json
+human-engine/viewer/threejs/samples/

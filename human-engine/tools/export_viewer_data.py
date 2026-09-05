@@ -15,10 +15,11 @@ import pathlib
 
 import numpy as np
 
-from sveyra_human import BodyParameters, SveyraHumanEngine
+from sveyra_human import SveyraHumanEngine
 from sveyra_human.body import change_muscle, change_weight
 from sveyra_human.body.anatomy import measurements
 from sveyra_human.body.cage import build_cage
+from sveyra_human.body.figures import figure
 from sveyra_human.body.mesh_deformer import vertex_part_map
 from sveyra_human.rig import compute_skin_weights, effective_parent, joint_order
 from sveyra_human.skeleton.limits import as_dict as limits_as_dict
@@ -33,13 +34,14 @@ def b64(array: np.ndarray) -> str:
 
 def main() -> int:
     engine = SveyraHumanEngine("balanced")
-    base = BodyParameters(height=178.0, waist_width=34.0, chest_width=40.0)
+    base = figure("man")
     variants = {
-        "base": ("Baseline", base),
-        "lighter": ("-15 kg", change_weight(base, -15.0)[0]),
-        "heavier": ("+15 kg", change_weight(base, 15.0)[0]),
-        "muscular": ("Muscle +1", change_muscle(base, 1.0)[0]),
-        "tall": ("196 cm", BodyParameters(height=196.0, waist_width=32.0, chest_width=39.0)),
+        "man": ("Man 178 cm", base),
+        "woman": ("Woman 165 cm", figure("woman")),
+        "child": ("Child 115 cm", figure("child")),
+        "lighter": ("Man -15 kg", change_weight(base, -15.0)[0]),
+        "heavier": ("Man +15 kg", change_weight(base, 15.0)[0]),
+        "muscular": ("Man, muscle +1", change_muscle(base, 1.0)[0]),
     }
 
     order = joint_order()
@@ -80,11 +82,24 @@ def main() -> int:
         joints[:, 0] -= offset_x
         joints[:, 2] -= offset_z
 
+        # Offsets from parent, which is what a three.js Bone wants. Emitted for
+        # every variant, not once: a child is not a scaled adult, and a skeleton
+        # left at the first variant's size hangs the arms outside a smaller body.
+        parents = payload["parents"]
+        bone_local = [
+            [round(float(v), 6) for v in (joints[i] - joints[parents[i]])]
+            if parents[i] >= 0
+            else [round(float(v), 6) for v in joints[i]]
+            for i in range(len(order))
+        ]
+        payload.setdefault("boneLocal", bone_local)
+
         payload["variants"][key] = {
             "label": label,
             "positions": b64(verts),
             "normals": b64(mesh.normals().astype(np.float32)),
             "joints": b64(joints.astype(np.float32)),
+            "boneLocal": bone_local,
             "measurements": {k: round(float(v), 1) for k, v in measurements(params).items()},
         }
 

@@ -7,15 +7,15 @@
   /* Committed dark stage: this is a model viewer, and the mesh is the subject.
      Every colour is painted explicitly so the page holds on any host ground. */
   :root {
-    --void:    #14100D;
-    --stage:   #1A1613;
-    --panel:   #1F1A15;
-    --raised:  #29221B;
-    --line:    #382E24;
-    --text:    #F0E6DA;
-    --muted:   #A2917E;
-    --clay:    #E0A46B;
-    --measure: #C99A63;
+    --void:    #0D0F12;
+    --stage:   #12151A;
+    --panel:   #171B21;
+    --raised:  #1E242C;
+    --line:    #2A323C;
+    --text:    #E8EDF3;
+    --muted:   #8A93A0;
+    --clay:    #C3D3E4;
+    --measure: #9FB3C8;
     --ok:      #7BC49A;
 
     --sans: "IBM Plex Sans", ui-sans-serif, system-ui, "Segoe UI", sans-serif;
@@ -241,8 +241,10 @@
     <label><input type="checkbox" id="wire"> Wireframe</label>
     <label><input type="checkbox" id="bones"> Skeleton</label>
     <label><input type="checkbox" id="spin"> Turntable</label>
-    <button type="button" class="variant" id="reset" style="margin-top:8px"><span>Reset pose</span><span class="delta">T-pose</span></button>
-    <button type="button" class="variant" id="reset" style="margin-top:8px"><span>Reset pose</span><span class="delta">T-pose</span></button>
+    <div class="label" style="margin-top:14px">Posture</div>
+    <div id="postures"></div>
+    <button type="button" class="variant" id="reset" style="margin-top:8px"><span>Reset pose</span><span class="delta">Standing</span></button>
+    <button type="button" class="variant" id="reset" style="margin-top:8px"><span>Reset pose</span><span class="delta">Standing</span></button>
   </div>
 </section>
 
@@ -252,6 +254,15 @@
   <p class="note" id="note"></p>
 </section>
 
+
+<section id="photo-panel">
+  <div class="label">From a photograph</div>
+  <label class="row">Height <input id="photo-height" type="number" value="175" min="80" max="220" step="1"> cm</label>
+  <label class="row"><input id="photo-file" type="file" accept="image/*"></label>
+  <div id="photo-samples"></div>
+  <img id="photo-stage" alt="the photograph being reconstructed">
+  <p id="photo-status"></p>
+</section>
 <footer>Every body shares one topology &middot; <b>morph-compatible</b></footer>
 <div id="hint">drag to orbit &middot; show the skeleton, then drag a joint to pose</div>
 
@@ -263,8 +274,17 @@
 <script>
 fetch("avatar_data.json").then(function (r) { return r.text(); }).then(function (text) {
   document.getElementById("avatar-data").textContent = text;
-  const s = document.createElement("script");
-  s.src = "viewer.js";
-  document.body.appendChild(s);
+  // limbshape and postures first: their constants must exist before the viewer
+  // builds anything, and a plain script tag does not guarantee that order.
+  ["limbshape.js", "hands.js", "postures.js", "viewer.js", "upload.js"].reduce(function (chain, file) {
+    return chain.then(function () {
+      return new Promise(function (done) {
+        const s = document.createElement("script");
+        s.src = file;
+        s.onload = done;
+        document.body.appendChild(s);
+      });
+    });
+  }, Promise.resolve());
 });
 </script>
