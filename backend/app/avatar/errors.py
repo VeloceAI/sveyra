@@ -1,0 +1,2 @@
+class AvatarUnavailableError(Exception):
+    pass

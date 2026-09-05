@@ -9,3 +9,4 @@ Start here:
 - `architecture/DEVELOPMENT_WORKFLOW.md`
 - `database/DATABASE.md`
 - `research/SUPPORTING_REPOS.md`
+- `DEVELOPMENT_LOG.md`

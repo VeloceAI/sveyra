@@ -1,6 +1,6 @@
 from inspect import isgeneratorfunction
 
-from sqlalchemy import DateTime, JSON, Text, Uuid
+from sqlalchemy import JSON, DateTime, Text, Uuid
 from sqlalchemy.engine.url import make_url
 
 from app.core.config import settings

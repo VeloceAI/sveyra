@@ -1,4 +1,5 @@
 from typing import Literal
+
 from app.shopping.port import ShoppingPort, ShoppingProduct
 
 

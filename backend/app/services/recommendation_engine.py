@@ -1,41 +1,18 @@
 from dataclasses import dataclass, field
 from uuid import UUID
 
+from app.services.category_taxonomy import (
+    BOTTOM,
+    ONEPIECE,
+    SHOES,
+    TOP,
+    bucket_for,
+    covers_top_and_bottom,
+)
+
 # Deterministic wardrobe ranking. Future AI adapters implement StylistPort
 # without changing the HTTP recommendation contract.
 
-TOP_CATEGORIES = frozenset(
-    {
-        "shirt",
-        "top",
-        "blouse",
-        "sweater",
-        "t-shirt",
-        "tee",
-        "jacket",
-        "hoodie",
-        "coat",
-    }
-)
-BOTTOM_CATEGORIES = frozenset(
-    {
-        "trousers",
-        "pants",
-        "jeans",
-        "skirt",
-        "shorts",
-        "chinos",
-    }
-)
-SHOE_CATEGORIES = frozenset(
-    {
-        "shoes",
-        "sneakers",
-        "boots",
-        "sandals",
-        "loafers",
-    }
-)
 NEUTRAL_COLORS = frozenset(
     {
         "black",
@@ -85,14 +62,7 @@ def _normalize(value: str) -> str:
 
 
 def _bucket(category: str) -> str | None:
-    key = _normalize(category)
-    if key in TOP_CATEGORIES:
-        return "top"
-    if key in BOTTOM_CATEGORIES:
-        return "bottom"
-    if key in SHOE_CATEGORIES:
-        return "shoes"
-    return None
+    return bucket_for(category)
 
 
 def _color_compatible(first: str, second: str) -> bool:
@@ -182,7 +152,9 @@ def _occasion_bonus(item: WardrobeItemSignal, occasion: str) -> tuple[float, str
     return 0.0, None
 
 
-def _style_bonus(item: WardrobeItemSignal, preferences: dict[str, object]) -> tuple[float, str | None]:
+def _style_bonus(
+    item: WardrobeItemSignal, preferences: dict[str, object]
+) -> tuple[float, str | None]:
     needles = _string_needles(preferences)
     if not needles:
         return 0.0, None
@@ -197,7 +169,9 @@ def _style_bonus(item: WardrobeItemSignal, preferences: dict[str, object]) -> tu
     return 0.0, None
 
 
-def _dislike_penalty(item: WardrobeItemSignal, dislikes: dict[str, object]) -> tuple[float, str | None]:
+def _dislike_penalty(
+    item: WardrobeItemSignal, dislikes: dict[str, object]
+) -> tuple[float, str | None]:
     needles = _string_needles(dislikes)
     if not needles:
         return 0.0, None
@@ -294,10 +268,10 @@ def _score_combo(
             reasons.append(dislike_note)
 
     buckets = {_bucket(item.category) for item in items}
-    if "top" in buckets and "bottom" in buckets:
+    if covers_top_and_bottom(buckets):
         score += 4.0
         reasons.append("balanced top and bottom")
-    if "shoes" in buckets:
+    if SHOES in buckets:
         score += 1.5
         reasons.append("includes shoes")
 
@@ -348,10 +322,17 @@ def rank_outfits_from_context(
     if not items:
         return []
 
-    tops = [item for item in items if _bucket(item.category) == "top"]
-    bottoms = [item for item in items if _bucket(item.category) == "bottom"]
-    shoes = [item for item in items if _bucket(item.category) == "shoes"]
-    other = [item for item in items if _bucket(item.category) is None]
+    tops = [item for item in items if _bucket(item.category) == TOP]
+    bottoms = [item for item in items if _bucket(item.category) == BOTTOM]
+    shoes = [item for item in items if _bucket(item.category) == SHOES]
+    onepieces = [item for item in items if _bucket(item.category) == ONEPIECE]
+    # Outerwear and accessories land here alongside unrecognised categories so
+    # they stay available as extras instead of dropping out of the wardrobe.
+    other = [
+        item
+        for item in items
+        if _bucket(item.category) not in {TOP, BOTTOM, SHOES, ONEPIECE}
+    ]
 
     candidates: list[RankedOutfit] = []
     used_signatures: set[tuple[UUID, ...]] = set()
@@ -379,12 +360,20 @@ def rank_outfits_from_context(
             )
         )
 
+    for onepiece in onepieces:
+        consider([onepiece])
+        for shoe in shoes[:3]:
+            consider([onepiece, shoe])
+
     if tops and bottoms:
         for top in tops:
             for bottom in bottoms:
                 consider([top, bottom])
                 for shoe in shoes[:3]:
                     consider([top, bottom, shoe])
+    # The fallbacks below only matter when nothing complete was built above.
+    elif candidates:
+        pass
     elif tops and other:
         for top in tops:
             for extra in other[:5]:

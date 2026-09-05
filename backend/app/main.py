@@ -1,6 +1,8 @@
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 
+from app.avatar.deps import build_avatar
+from app.avatar.port import AvatarPort
 from app.core.config import settings
 from app.core.errors import (
     AuthRateLimitExceededError,
@@ -11,9 +13,11 @@ from app.core.errors import (
     InvalidTokenError,
     MediaAssetNotFoundError,
     MediaDeletionIncompleteError,
+    MediaReferenceAlreadyClaimedError,
     MediaUploadTooLargeError,
     OutfitNotFoundError,
     ProfileNotFoundError,
+    RateLimitExceededError,
     UnauthorizedError,
     UserNotFoundError,
     WardrobeEmptyError,
@@ -27,10 +31,12 @@ from app.core.errors import (
     invalid_token_handler,
     media_asset_not_found_handler,
     media_deletion_incomplete_handler,
+    media_reference_already_claimed_handler,
     media_upload_too_large_handler,
     not_found_handler,
     outfit_not_found_handler,
     profile_not_found_handler,
+    rate_limit_exceeded_handler,
     request_validation_handler,
     storage_unavailable_handler,
     unauthorized_handler,
@@ -62,13 +68,17 @@ def create_app(
     storage: StoragePort | None = None,
     vision: VisionPort | None = None,
     stylist: StylistPort | None = None,
+    avatar: AvatarPort | None = None,
 ) -> FastAPI:
     app = FastAPI(title="SVEYRA API", version="0.1.0")
+
     # Attach Settings for request/app access without opening DB, Redis, or model clients.
     app.state.settings = settings
     app.state.storage = storage if storage is not None else build_storage()
     app.state.vision = vision if vision is not None else build_vision()
     app.state.stylist = stylist if stylist is not None else build_stylist()
+    app.state.avatar = avatar if avatar is not None else build_avatar()
+
     app.add_exception_handler(404, not_found_handler)
     app.add_exception_handler(RequestValidationError, request_validation_handler)
     app.add_exception_handler(ProfileNotFoundError, profile_not_found_handler)
@@ -81,14 +91,29 @@ def create_app(
     app.add_exception_handler(MediaUploadTooLargeError, media_upload_too_large_handler)
     app.add_exception_handler(StorageUnavailableError, storage_unavailable_handler)
     app.add_exception_handler(MediaDeletionIncompleteError, media_deletion_incomplete_handler)
+    app.add_exception_handler(
+        MediaReferenceAlreadyClaimedError,
+        media_reference_already_claimed_handler,
+    )
     app.add_exception_handler(UnauthorizedError, unauthorized_handler)
     app.add_exception_handler(InvalidTokenError, invalid_token_handler)
     app.add_exception_handler(InvalidCredentialsError, invalid_credentials_handler)
-    app.add_exception_handler(EmailAlreadyRegisteredError, email_already_registered_handler)
-    app.add_exception_handler(AuthRateLimitExceededError, auth_rate_limit_exceeded_handler)
+    app.add_exception_handler(
+        EmailAlreadyRegisteredError,
+        email_already_registered_handler,
+    )
+    app.add_exception_handler(
+        AuthRateLimitExceededError,
+        auth_rate_limit_exceeded_handler,
+    )
     app.add_exception_handler(WardrobeEmptyError, wardrobe_empty_handler)
-    app.add_exception_handler(WardrobeMediaMissingError, wardrobe_media_missing_handler)
+    app.add_exception_handler(
+        WardrobeMediaMissingError,
+        wardrobe_media_missing_handler,
+    )
     app.add_exception_handler(VisionUnavailableError, vision_unavailable_handler)
+    app.add_exception_handler(RateLimitExceededError, rate_limit_exceeded_handler)
+
     app.include_router(health_router)
     app.include_router(auth_router, prefix="/v1")
     app.include_router(profile_router, prefix="/v1")
@@ -97,6 +122,7 @@ def create_app(
     app.include_router(media_asset_router, prefix="/v1")
     app.include_router(outfit_router, prefix="/v1")
     app.include_router(recommendation_router, prefix="/v1")
+
     return app
 
 

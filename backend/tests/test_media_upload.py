@@ -3,7 +3,6 @@ from uuid import uuid4
 import pytest
 from fastapi.testclient import TestClient
 
-from app.core.config import settings
 from app.storage.memory import InMemoryStorage
 from tests.auth_helpers import register_and_auth
 

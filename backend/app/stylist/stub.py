@@ -1,4 +1,8 @@
-from app.services.recommendation_engine import RankedOutfit, RankingContext, rank_outfits_from_context
+from app.services.recommendation_engine import (
+    RankedOutfit,
+    RankingContext,
+    rank_outfits_from_context,
+)
 from app.stylist.port import StylistPort
 
 

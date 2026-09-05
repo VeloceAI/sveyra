@@ -40,33 +40,57 @@ class MediaAssetService:
         # Bytes ingestion used by POST /v1/media/upload. Not a download API.
         if self.storage is None:
             raise RuntimeError("StoragePort is required to persist bytes.")
+
         user = self.repository.get_user_by_id(session, user_id)
         if user is None:
             raise UserNotFoundError
+
         if wardrobe_item_id is not None:
-            item = self.repository.get_wardrobe_item_by_id(session, wardrobe_item_id)
+            item = self.repository.get_wardrobe_item_by_id(
+                session,
+                wardrobe_item_id,
+            )
             if item is None or item.user_id != user_id:
                 raise WardrobeItemNotFoundError
+
         if not data:
             raise EmptyMediaUploadError
+
+        # The storage layer generates the authoritative reference.
+        # Clients never supply a storage reference.
         reference = self.storage.put(data)
-        asset = self.repository.create_asset(session, user_id, reference, wardrobe_item_id)
+
+        asset = self.repository.create_asset(
+            session,
+            user_id,
+            reference,
+            wardrobe_item_id,
+        )
         session.commit()
         session.refresh(asset)
+
         return self._to_response(asset)
 
     def get_asset(
-        self, session: Session, asset_id: UUID, user_id: UUID
+        self,
+        session: Session,
+        asset_id: UUID,
+        user_id: UUID,
     ) -> MediaAssetResponse:
         asset = self._get_owned_asset(session, asset_id, user_id)
         return self._to_response(asset)
 
     def get_asset_access_url(
-        self, session: Session, asset_id: UUID, user_id: UUID
+        self,
+        session: Session,
+        asset_id: UUID,
+        user_id: UUID,
     ) -> MediaAssetAccessResponse:
         if self.storage is None:
             raise RuntimeError("StoragePort is required to create access URLs.")
+
         asset = self._get_owned_asset(session, asset_id, user_id)
+
         try:
             url = self.storage.create_access_url(
                 asset.reference,
@@ -74,17 +98,26 @@ class MediaAssetService:
             )
         except StorageObjectNotFoundError:
             raise StorageUnavailableError
+
         return MediaAssetAccessResponse(url=url)
 
-    def delete_asset(self, session: Session, asset_id: UUID, user_id: UUID) -> None:
+    def delete_asset(
+        self,
+        session: Session,
+        asset_id: UUID,
+        user_id: UUID,
+    ) -> None:
         if self.storage is None:
             raise RuntimeError("StoragePort is required to delete bytes.")
+
         asset = self._get_owned_asset(session, asset_id, user_id)
+
         # Storage delete is idempotent. The media_assets row is the durable
         # retry record: a later DELETE with the same asset_id recovers a
         # partial failure without workers or extra schema.
         self.storage.delete(asset.reference)
         self.repository.delete_asset(session, asset)
+
         try:
             session.commit()
         except SQLAlchemyError:
@@ -92,11 +125,16 @@ class MediaAssetService:
             raise MediaDeletionIncompleteError
 
     def _get_owned_asset(
-        self, session: Session, asset_id: UUID, user_id: UUID
+        self,
+        session: Session,
+        asset_id: UUID,
+        user_id: UUID,
     ) -> MediaAsset:
         asset = self.repository.get_asset_by_id(session, asset_id)
+
         if asset is None or asset.user_id != user_id:
             raise MediaAssetNotFoundError
+
         return asset
 
     def _to_response(self, asset: MediaAsset) -> MediaAssetResponse:

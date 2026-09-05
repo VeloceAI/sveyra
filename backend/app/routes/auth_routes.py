@@ -4,7 +4,12 @@ from sqlalchemy.orm import Session
 from app.auth.rate_limit import login_rate_limit, register_rate_limit
 from app.db.session import get_db
 from app.handlers.auth_handler import login_user, register_user
-from app.schemas.auth_schema import LoginRequest, RegisterRequest, RegisterResponse, TokenResponse
+from app.schemas.auth_schema import (
+    LoginRequest,
+    RegisterRequest,
+    RegisterResponse,
+    TokenResponse,
+)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 

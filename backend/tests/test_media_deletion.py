@@ -11,8 +11,8 @@ from app.models.user import User
 from app.services.media_asset_service import MediaAssetService
 from app.storage.deps import get_storage
 from app.storage.errors import StorageObjectNotFoundError, StorageUnavailableError
-from tests.auth_helpers import register_and_auth
 from app.storage.memory import InMemoryStorage
+from tests.auth_helpers import register_and_auth
 
 UPLOAD_BYTES = b"example image bytes"
 
