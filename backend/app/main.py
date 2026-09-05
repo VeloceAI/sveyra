@@ -3,6 +3,7 @@ from fastapi.exceptions import RequestValidationError
 
 from app.core.config import settings
 from app.core.errors import (
+    AuthRateLimitExceededError,
     BodyProfileNotFoundError,
     EmailAlreadyRegisteredError,
     EmptyMediaUploadError,
@@ -18,6 +19,7 @@ from app.core.errors import (
     WardrobeEmptyError,
     WardrobeItemNotFoundError,
     WardrobeMediaMissingError,
+    auth_rate_limit_exceeded_handler,
     body_profile_not_found_handler,
     email_already_registered_handler,
     empty_media_upload_handler,
@@ -83,6 +85,7 @@ def create_app(
     app.add_exception_handler(InvalidTokenError, invalid_token_handler)
     app.add_exception_handler(InvalidCredentialsError, invalid_credentials_handler)
     app.add_exception_handler(EmailAlreadyRegisteredError, email_already_registered_handler)
+    app.add_exception_handler(AuthRateLimitExceededError, auth_rate_limit_exceeded_handler)
     app.add_exception_handler(WardrobeEmptyError, wardrobe_empty_handler)
     app.add_exception_handler(WardrobeMediaMissingError, wardrobe_media_missing_handler)
     app.add_exception_handler(VisionUnavailableError, vision_unavailable_handler)

@@ -162,6 +162,15 @@ def test_media_assets_columns_match_0004() -> None:
     assert table.c.wardrobe_item_id.nullable is True
     assert isinstance(table.c.reference.type, Text)
     assert table.c.reference.nullable is False
+    unique_references = [
+        constraint
+        for constraint in table.constraints
+        if getattr(constraint, "columns", None)
+        and list(constraint.columns.keys()) == ["reference"]
+        and type(constraint).__name__ == "UniqueConstraint"
+    ]
+    assert len(unique_references) == 1
+    assert unique_references[0].name == "uq_media_assets_reference"
     unique_item_ids = [
         constraint
         for constraint in table.constraints

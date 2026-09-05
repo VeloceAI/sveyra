@@ -144,11 +144,13 @@ def test_enrich_uses_storage_port_get(client: TestClient) -> None:
     client.app.state.storage = spy
     _user_id, headers = register_and_auth(client, "enrich-spy@example.com")
     item_id = _create_item(client, headers)
-    asset = _upload_linked(client, headers, item_id)
+    before_refs = set(spy.inner._objects.keys())
+    _upload_linked(client, headers, item_id)
 
     response = client.post(f"/v1/wardrobe/{item_id}/enrich", headers=headers)
     assert response.status_code == 200
-    assert spy.get_calls == [asset["reference"]]
+    uploaded_reference = (set(spy.inner._objects.keys()) - before_refs).pop()
+    assert spy.get_calls == [uploaded_reference]
 
 
 def test_enrich_low_confidence_does_not_overwrite_category_color(

@@ -27,12 +27,11 @@ def test_access_returns_temporary_url(client: TestClient) -> None:
     _user_id, headers = register_and_auth(client, "access-user@example.com")
     upload_response = _upload(client, headers)
     asset_id = upload_response.json()["id"]
-    reference = upload_response.json()["reference"]
 
     response = client.get(f"/v1/media/{asset_id}/access", headers=headers)
     assert response.status_code == 200
     body = response.json()
-    assert body == {"url": f"memory://{reference}"}
+    assert body["url"].startswith("memory://asset_")
 
 
 def test_access_missing_asset_returns_not_found(client: TestClient) -> None:
@@ -69,20 +68,6 @@ def test_access_storage_failure_returns_unavailable(client: TestClient) -> None:
     client.app.dependency_overrides.pop(get_storage, None)
 
 
-def test_access_does_not_modify_reference(client: TestClient) -> None:
-    _user_id, headers = register_and_auth(client, "access-user@example.com")
-    upload_body = _upload(client, headers).json()
-    asset_id = upload_body["id"]
-    original_reference = upload_body["reference"]
-
-    client.get(f"/v1/media/{asset_id}/access", headers=headers)
-
-    metadata = client.get(f"/v1/media/{asset_id}", headers=headers).json()
-    assert metadata["reference"] == original_reference
-    assert metadata["reference"] == upload_body["reference"]
-    assert "://" not in metadata["reference"]
-
-
 def test_metadata_get_still_returns_metadata_only(client: TestClient) -> None:
     _user_id, headers = register_and_auth(client, "access-user@example.com")
     upload_body = _upload(client, headers).json()
@@ -91,13 +76,14 @@ def test_metadata_get_still_returns_metadata_only(client: TestClient) -> None:
     response = client.get(f"/v1/media/{asset_id}", headers=headers)
     assert response.status_code == 200
     body = response.json()
-    assert set(body.keys()) == {"id", "user_id", "wardrobe_item_id", "reference"}
+    assert set(body.keys()) == {"id", "user_id", "wardrobe_item_id"}
     assert body["id"] == asset_id
     assert "url" not in body
+    assert "reference" not in body
 
 
 def test_upload_still_works_after_access_endpoint(client: TestClient) -> None:
     _user_id, headers = register_and_auth(client, "access-user@example.com")
     response = _upload(client, headers)
     assert response.status_code == 200
-    assert response.json()["reference"].startswith("asset_")
+    assert response.json()["id"]

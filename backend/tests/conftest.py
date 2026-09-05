@@ -6,6 +6,7 @@ from sqlalchemy import Engine, create_engine
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
+from app.auth.rate_limit import reset_auth_rate_limiter
 from app.db.base import Base
 from app.db.session import get_db
 from app.main import create_app
@@ -30,6 +31,13 @@ def sqlite_engine() -> Generator[Engine, None, None]:
     yield engine
     Base.metadata.drop_all(engine)
     engine.dispose()
+
+
+@pytest.fixture(autouse=True)
+def reset_auth_rate_limits() -> Generator[None, None, None]:
+    reset_auth_rate_limiter()
+    yield
+    reset_auth_rate_limiter()
 
 
 @pytest.fixture

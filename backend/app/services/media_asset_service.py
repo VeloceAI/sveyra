@@ -15,7 +15,6 @@ from app.models.media_asset import MediaAsset
 from app.repositories.media_asset_repository import MediaAssetRepository
 from app.schemas.media_asset_schema import (
     MediaAssetAccessResponse,
-    MediaAssetCreateRequest,
     MediaAssetResponse,
 )
 from app.storage.errors import StorageObjectNotFoundError, StorageUnavailableError
@@ -30,26 +29,6 @@ class MediaAssetService:
     ) -> None:
         self.repository = repository or MediaAssetRepository()
         self.storage = storage
-
-    def create_asset(
-        self, session: Session, user_id: UUID, payload: MediaAssetCreateRequest
-    ) -> MediaAssetResponse:
-        user = self.repository.get_user_by_id(session, user_id)
-        if user is None:
-            raise UserNotFoundError
-        if payload.wardrobe_item_id is not None:
-            item = self.repository.get_wardrobe_item_by_id(session, payload.wardrobe_item_id)
-            if item is None or item.user_id != user_id:
-                raise WardrobeItemNotFoundError
-        asset = self.repository.create_asset(
-            session,
-            user_id,
-            payload.reference,
-            payload.wardrobe_item_id,
-        )
-        session.commit()
-        session.refresh(asset)
-        return self._to_response(asset)
 
     def create_asset_from_bytes(
         self,
@@ -125,5 +104,4 @@ class MediaAssetService:
             id=asset.id,
             user_id=asset.user_id,
             wardrobe_item_id=asset.wardrobe_item_id,
-            reference=asset.reference,
         )

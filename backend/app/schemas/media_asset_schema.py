@@ -1,13 +1,6 @@
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
-
-from app.schemas.common import StrictRequestModel
-
-
-class MediaAssetCreateRequest(StrictRequestModel):
-    reference: str = Field(min_length=1, max_length=512)
-    wardrobe_item_id: UUID | None = None
+from pydantic import BaseModel, ConfigDict
 
 
 class MediaAssetResponse(BaseModel):
@@ -16,7 +9,6 @@ class MediaAssetResponse(BaseModel):
     id: UUID
     user_id: UUID
     wardrobe_item_id: UUID | None
-    reference: str
 
 
 class MediaAssetAccessResponse(BaseModel):

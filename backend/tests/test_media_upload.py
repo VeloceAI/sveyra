@@ -46,15 +46,13 @@ def _upload(
     )
 
 
-def _assert_opaque(reference: str) -> None:
-    lowered = reference.lower()
-    assert reference
-    assert not lowered.startswith("http://")
-    assert not lowered.startswith("https://")
-    assert "://" not in reference
-    assert "\\" not in reference
-    assert not reference.startswith("/")
-
+def _opaque_reference_from_storage(client: TestClient, payload: bytes = UPLOAD_BYTES) -> str:
+    storage = client.app.state.storage
+    assert isinstance(storage, InMemoryStorage)
+    for reference, stored in storage._objects.items():
+        if stored == payload:
+            return reference
+    raise AssertionError("storage reference not found for payload")
 
 def test_upload_for_authenticated_user(client: TestClient) -> None:
     user_id, headers = register_and_auth(client, "upload-user@example.com")
@@ -63,8 +61,8 @@ def test_upload_for_authenticated_user(client: TestClient) -> None:
     body = response.json()
     assert body["user_id"] == user_id
     assert body["wardrobe_item_id"] is None
-    _assert_opaque(body["reference"])
     assert body["id"]
+    assert "reference" not in body
 
 
 def test_upload_with_wardrobe_item_id(client: TestClient) -> None:
@@ -155,23 +153,21 @@ def test_upload_persists_metadata_and_bytes_in_storage(client: TestClient) -> No
     created = _upload(client, headers).json()
     storage = client.app.state.storage
     assert isinstance(storage, InMemoryStorage)
-    assert storage.get(created["reference"]) == UPLOAD_BYTES
+    reference = _opaque_reference_from_storage(client)
+    assert storage.get(reference) == UPLOAD_BYTES
     fetched = client.get(f"/v1/media/{created['id']}", headers=headers)
     assert fetched.status_code == 200
     body = fetched.json()
     assert body["id"] == created["id"]
-    assert body["reference"] == created["reference"]
     assert "bytes" not in body
-    assert body["reference"] != UPLOAD_BYTES.decode("latin-1")
+    assert "reference" not in body
 
 
-def test_existing_post_media_registration_unchanged(client: TestClient) -> None:
+def test_client_supplied_reference_endpoint_removed(client: TestClient) -> None:
     _user_id, headers = register_and_auth(client, "upload-user@example.com")
-    reference = "user/abc/item/xyz/image-001"
     response = client.post(
         "/v1/media",
-        json={"reference": reference},
+        json={"reference": "user/abc/item/xyz/image-001"},
         headers=headers,
     )
-    assert response.status_code == 200
-    assert response.json()["reference"] == reference
+    assert response.status_code == 404

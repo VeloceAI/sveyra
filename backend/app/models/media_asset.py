@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from sqlalchemy import ForeignKey, Text, Uuid
+from sqlalchemy import ForeignKey, Text, UniqueConstraint, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -10,6 +10,7 @@ from app.models.wardrobe_item import WardrobeItem
 
 class MediaAsset(Base):
     __tablename__ = "media_assets"
+    __table_args__ = (UniqueConstraint("reference", name="uq_media_assets_reference"),)
 
     id: Mapped[UUID] = mapped_column(Uuid(), primary_key=True)
     user_id: Mapped[UUID] = mapped_column(Uuid(), ForeignKey("users.id"), nullable=False)

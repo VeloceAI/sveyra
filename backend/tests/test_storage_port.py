@@ -4,6 +4,7 @@ import pytest
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.errors import UserNotFoundError
+from app.models.media_asset import MediaAsset
 from app.models.user import User
 from app.services.media_asset_service import MediaAssetService
 from app.storage.errors import StorageObjectNotFoundError
@@ -117,12 +118,14 @@ def test_create_asset_from_bytes_persists_opaque_reference(sqlite_engine) -> Non
     created = service.create_asset_from_bytes(session, user.id, payload)
 
     assert created.user_id == user.id
-    assert created.reference
-    assert not created.reference.lower().startswith("http")
-    assert storage.get(created.reference) == payload
+    stored = session.get(MediaAsset, created.id)
+    assert stored is not None
+    assert stored.reference
+    assert not stored.reference.lower().startswith("http")
+    assert storage.get(stored.reference) == payload
     fetched = service.get_asset(session, created.id, user.id)
-    assert fetched.reference == created.reference
-    assert "bytes" not in fetched.model_dump()
+    assert fetched.id == created.id
+    assert "reference" not in fetched.model_dump()
     session.close()
 
 

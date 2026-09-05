@@ -106,11 +106,10 @@ def test_outfit_list_pagination_defaults(client: TestClient) -> None:
     assert len(body["outfits"]) == 1
 
 
-def test_media_reference_empty_rejected(client: TestClient) -> None:
+def test_client_supplied_media_reference_endpoint_removed(client: TestClient) -> None:
     _user_id, headers = register_and_auth(client, "media-ref@example.com")
-    response = client.post("/v1/media", headers=headers, json={"reference": ""})
-    assert response.status_code == 422
-    assert response.json()["error"]["code"] == "validation_error"
+    response = client.post("/v1/media", headers=headers, json={"reference": "opaque-ref"})
+    assert response.status_code == 404
 
 
 def test_validation_errors_do_not_leak_internals(client: TestClient) -> None:

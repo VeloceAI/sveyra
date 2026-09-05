@@ -91,7 +91,6 @@ export type MediaAsset = {
   id: string;
   user_id: string;
   wardrobe_item_id: string | null;
-  reference: string;
 };
 
 export type MediaAssetAccessResponse = {

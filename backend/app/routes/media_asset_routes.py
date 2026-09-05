@@ -6,7 +6,6 @@ from sqlalchemy.orm import Session
 from app.auth.deps import get_current_user
 from app.db.session import get_db
 from app.handlers.media_asset_handler import (
-    create_media_asset,
     delete_media_asset,
     get_media_asset,
     get_media_asset_access,
@@ -15,22 +14,12 @@ from app.handlers.media_asset_handler import (
 from app.models.user import User
 from app.schemas.media_asset_schema import (
     MediaAssetAccessResponse,
-    MediaAssetCreateRequest,
     MediaAssetResponse,
 )
 from app.storage.deps import get_storage
 from app.storage.port import StoragePort
 
 router = APIRouter(prefix="/media", tags=["media"])
-
-
-@router.post("", response_model=MediaAssetResponse)
-def create_asset(
-    payload: MediaAssetCreateRequest,
-    session: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
-) -> MediaAssetResponse:
-    return create_media_asset(payload, session, user)
 
 
 @router.post("/upload", response_model=MediaAssetResponse)

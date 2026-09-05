@@ -1,7 +1,12 @@
 from uuid import uuid4
 
+from uuid import UUID
+
 from fastapi.testclient import TestClient
 
+from sqlalchemy.orm import Session, sessionmaker
+
+from app.models.media_asset import MediaAsset
 from app.storage.deps import get_storage
 from app.storage.errors import StorageObjectNotFoundError, StorageUnavailableError
 from app.storage.memory import InMemoryStorage
@@ -125,13 +130,22 @@ def test_delete_returns_204_and_removes_item(client: TestClient) -> None:
     assert missing.json()["error"]["code"] == "wardrobe_item_not_found"
 
 
-def test_delete_cascades_linked_media(client: TestClient) -> None:
+def _reference_for_asset(sqlite_engine, asset_id: str) -> str:
+    factory = sessionmaker(bind=sqlite_engine, autoflush=False, autocommit=False)
+    with factory() as session:
+        asset = session.get(MediaAsset, UUID(asset_id))
+        assert asset is not None
+        return asset.reference
+
+
+def test_delete_cascades_linked_media(client: TestClient, sqlite_engine) -> None:
     _user_id, headers = register_and_auth(client, "delete-media@example.com")
     item = _create_item(client, headers)
     asset = _upload_linked(client, headers, item["id"])
     storage = client.app.state.storage
     assert isinstance(storage, InMemoryStorage)
-    assert storage.get(asset["reference"]) == UPLOAD_BYTES
+    reference = _reference_for_asset(sqlite_engine, asset["id"])
+    assert storage.get(reference) == UPLOAD_BYTES
 
     response = client.delete(f"/v1/wardrobe/{item['id']}", headers=headers)
     assert response.status_code == 204
@@ -139,7 +153,7 @@ def test_delete_cascades_linked_media(client: TestClient) -> None:
     assert media.status_code == 404
     assert media.json()["error"]["code"] == "media_asset_not_found"
     try:
-        storage.get(asset["reference"])
+        storage.get(reference)
         assert False, "expected storage object to be gone"
     except StorageObjectNotFoundError:
         pass

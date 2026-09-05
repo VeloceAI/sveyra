@@ -1,4 +1,4 @@
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from fastapi.testclient import TestClient
@@ -40,6 +40,12 @@ class TrackingDeleteStorage(InMemoryStorage):
         super().delete(reference)
 
 
+def _model_reference(session: Session, asset_id: UUID) -> str:
+    asset = session.get(MediaAsset, asset_id)
+    assert asset is not None
+    return asset.reference
+
+
 def test_service_deletes_storage_then_metadata(sqlite_engine) -> None:
     factory = sessionmaker(
         bind=sqlite_engine,
@@ -55,7 +61,7 @@ def test_service_deletes_storage_then_metadata(sqlite_engine) -> None:
     session.commit()
 
     created = service.create_asset_from_bytes(session, user.id, UPLOAD_BYTES)
-    reference = created.reference
+    reference = _model_reference(session, created.id)
     service.delete_asset(session, created.id, user.id)
 
     assert session.get(MediaAsset, created.id) is None
@@ -79,9 +85,10 @@ def test_service_uses_stored_reference_for_storage_delete(sqlite_engine) -> None
     session.commit()
 
     created = service.create_asset_from_bytes(session, user.id, UPLOAD_BYTES)
+    reference = _model_reference(session, created.id)
     service.delete_asset(session, created.id, user.id)
 
-    assert storage.deleted_references == [created.reference]
+    assert storage.deleted_references == [reference]
     session.close()
 
 
@@ -100,11 +107,12 @@ def test_service_storage_failure_prevents_metadata_deletion(sqlite_engine) -> No
     session.commit()
 
     created = service.create_asset_from_bytes(session, user.id, UPLOAD_BYTES)
+    reference = _model_reference(session, created.id)
     with pytest.raises(StorageUnavailableError):
         service.delete_asset(session, created.id, user.id)
 
     assert session.get(MediaAsset, created.id) is not None
-    assert storage.get(created.reference) == UPLOAD_BYTES
+    assert storage.get(reference) == UPLOAD_BYTES
     session.close()
 
 
@@ -122,11 +130,21 @@ def test_service_missing_asset_raises_not_found(sqlite_engine) -> None:
     session.close()
 
 
-def test_delete_success_returns_204_and_removes_metadata_and_object(client: TestClient) -> None:
+def _reference_for_asset(sqlite_engine, asset_id: str) -> str:
+    factory = sessionmaker(bind=sqlite_engine, autoflush=False, autocommit=False)
+    with factory() as session:
+        asset = session.get(MediaAsset, UUID(asset_id))
+        assert asset is not None
+        return asset.reference
+
+
+def test_delete_success_returns_204_and_removes_metadata_and_object(
+    client: TestClient, sqlite_engine
+) -> None:
     _user_id, headers = register_and_auth(client, "delete-user@example.com")
     upload = _upload(client, headers).json()
     asset_id = upload["id"]
-    reference = upload["reference"]
+    reference = _reference_for_asset(sqlite_engine, asset_id)
     storage = client.app.state.storage
 
     response = client.delete(f"/v1/media/{asset_id}", headers=headers)
@@ -186,11 +204,13 @@ def test_delete_storage_failure_preserves_metadata(client: TestClient) -> None:
     client.app.dependency_overrides.pop(get_storage, None)
 
 
-def test_http_retry_after_storage_failure_completes_deletion(client: TestClient) -> None:
+def test_http_retry_after_storage_failure_completes_deletion(
+    client: TestClient, sqlite_engine
+) -> None:
     _user_id, headers = register_and_auth(client, "delete-user@example.com")
     upload = _upload(client, headers).json()
     asset_id = upload["id"]
-    reference = upload["reference"]
+    reference = _reference_for_asset(sqlite_engine, asset_id)
     shared_storage = client.app.state.storage
     failing_storage = FailingDeleteStorage()
     failing_storage._objects = shared_storage._objects
@@ -207,11 +227,13 @@ def test_http_retry_after_storage_failure_completes_deletion(client: TestClient)
         shared_storage.get(reference)
 
 
-def test_http_retry_when_object_already_missing_removes_metadata(client: TestClient) -> None:
+def test_http_retry_when_object_already_missing_removes_metadata(
+    client: TestClient, sqlite_engine
+) -> None:
     _user_id, headers = register_and_auth(client, "delete-user@example.com")
     upload = _upload(client, headers).json()
     asset_id = upload["id"]
-    reference = upload["reference"]
+    reference = _reference_for_asset(sqlite_engine, asset_id)
     storage = client.app.state.storage
     storage.delete(reference)
 
@@ -235,6 +257,7 @@ def test_service_retry_after_storage_failure(sqlite_engine) -> None:
     session.commit()
 
     created = service.create_asset_from_bytes(session, user.id, UPLOAD_BYTES)
+    reference = _model_reference(session, created.id)
     with pytest.raises(StorageUnavailableError):
         service.delete_asset(session, created.id, user.id)
     assert session.get(MediaAsset, created.id) is not None
@@ -244,7 +267,7 @@ def test_service_retry_after_storage_failure(sqlite_engine) -> None:
     MediaAssetService(storage=recovered).delete_asset(session, created.id, user.id)
     assert session.get(MediaAsset, created.id) is None
     with pytest.raises(StorageObjectNotFoundError):
-        recovered.get(created.reference)
+        recovered.get(reference)
     session.close()
 
 
@@ -263,7 +286,8 @@ def test_service_retry_when_object_already_missing(sqlite_engine) -> None:
     session.commit()
 
     created = service.create_asset_from_bytes(session, user.id, UPLOAD_BYTES)
-    storage.delete(created.reference)
+    reference = _model_reference(session, created.id)
+    storage.delete(reference)
     service.delete_asset(session, created.id, user.id)
 
     assert session.get(MediaAsset, created.id) is None
@@ -285,6 +309,7 @@ def test_commit_failure_leaves_metadata_and_retry_recovers(sqlite_engine) -> Non
     session.commit()
 
     created = service.create_asset_from_bytes(session, user.id, UPLOAD_BYTES)
+    reference = _model_reference(session, created.id)
     original_commit = session.commit
 
     def fail_once() -> None:
@@ -297,10 +322,10 @@ def test_commit_failure_leaves_metadata_and_retry_recovers(sqlite_engine) -> Non
 
     remaining = session.get(MediaAsset, created.id)
     assert remaining is not None
-    assert remaining.reference == created.reference
+    assert remaining.reference == reference
 
     service.delete_asset(session, created.id, user.id)
     assert session.get(MediaAsset, created.id) is None
     with pytest.raises(StorageObjectNotFoundError):
-        storage.get(created.reference)
+        storage.get(reference)
     session.close()

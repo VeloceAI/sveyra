@@ -8,7 +8,6 @@ from app.core.errors import MediaUploadTooLargeError
 from app.models.user import User
 from app.schemas.media_asset_schema import (
     MediaAssetAccessResponse,
-    MediaAssetCreateRequest,
     MediaAssetResponse,
 )
 from app.services.media_asset_service import MediaAssetService
@@ -49,13 +48,6 @@ async def _read_upload_bounded(
             raise MediaUploadTooLargeError
         chunks.append(chunk)
     return b"".join(chunks)
-
-
-def create_media_asset(
-    payload: MediaAssetCreateRequest, session: Session, user: User
-) -> MediaAssetResponse:
-    service = MediaAssetService()
-    return service.create_asset(session, user.id, payload)
 
 
 def get_media_asset(asset_id: UUID, session: Session, user: User) -> MediaAssetResponse:

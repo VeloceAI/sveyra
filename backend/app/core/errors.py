@@ -83,6 +83,10 @@ class WardrobeMediaMissingError(Exception):
     pass
 
 
+class AuthRateLimitExceededError(Exception):
+    pass
+
+
 async def not_found_handler(_request: Request, _exc: StarletteHTTPException) -> JSONResponse:
     return JSONResponse(
         status_code=404,
@@ -216,6 +220,18 @@ async def email_already_registered_handler(
     return JSONResponse(
         status_code=409,
         content=error_body("email_already_registered", "Email is already registered."),
+    )
+
+
+async def auth_rate_limit_exceeded_handler(
+    _request: Request, _exc: AuthRateLimitExceededError
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=429,
+        content=error_body(
+            "rate_limit_exceeded",
+            "Too many authentication attempts. Please try again later.",
+        ),
     )
 
 
