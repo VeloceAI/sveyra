@@ -79,9 +79,21 @@ def test_an_elbow_does_not_extend_past_straight() -> None:
 
 
 def test_an_elbow_bends_the_way_it_should() -> None:
-    bent = (-1.4, 0.0, 0.0)
+    """About Y, because a T-pose forearm lies along X and X is its twist."""
+    bent = (0.0, -1.4, 0.0)
     assert impossible_joints({"forearm_L": bent}) == []
     assert clamp_pose({"forearm_L": bent})["forearm_L"] == bent
+
+
+def test_an_elbow_does_not_bend_the_wrong_way() -> None:
+    assert impossible_joints({"forearm_L": (0.0, 1.4, 0.0)}) == ["forearm_L"]
+    assert clamp_pose({"forearm_L": (0.0, 1.4, 0.0)})["forearm_L"][1] == 0.0
+
+
+def test_an_elbow_does_not_twist_along_its_own_length() -> None:
+    """The axis the arm lies on is the one an elbow has no freedom in."""
+    assert impossible_joints({"forearm_L": (0.5, 0.0, 0.0)}) == ["forearm_L"]
+    assert clamp_pose({"forearm_L": (0.5, 0.0, 0.0)})["forearm_L"][0] == 0.0
 
 
 def test_a_knee_bends_the_opposite_way_to_an_elbow() -> None:
@@ -94,6 +106,8 @@ def test_hinges_neither_twist_nor_splay(joint: str) -> None:
     limit = limit_for(joint)
     assert limit.twist == (0.0, 0.0)
     assert limit.abduct == (0.0, 0.0)
+    locked = [r for i, r in enumerate(limit.ranges()) if i != limit.axes[0]]
+    assert locked == [(0.0, 0.0), (0.0, 0.0)]
 
 
 def test_a_shoulder_is_freer_than_an_elbow() -> None:
@@ -128,7 +142,7 @@ def test_an_unknown_joint_passes_through_unconstrained() -> None:
 def test_a_natural_standing_pose_breaks_nothing() -> None:
     pose = {
         "upperarm_L": (-0.3, 0.1, 0.4),
-        "forearm_L": (-0.5, 0.0, 0.0),
+        "forearm_L": (0.0, -0.5, 0.0),
         "thigh_R": (-0.2, 0.0, 0.1),
         "calf_R": (0.4, 0.0, 0.0),
         "head": (0.1, 0.2, 0.0),

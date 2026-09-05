@@ -65,12 +65,13 @@ def build_skeleton(params: BodyParameters) -> Skeleton:
     # Arms are laid out along X in the rest pose; the shoulder drops slightly
     # outboard by the slope parameter.
     #
-    # The shoulder joint sits just inside the torso surface, not at the full
-    # half-shoulder width. The torso cross section at shoulder level is 0.82 of
-    # shoulder_width, so placing the joint at half_shoulder left the arm floating
-    # detached in the silhouette. Arm length is still measured from this joint,
-    # which is where an arm is measured from anatomically.
-    torso_edge = float(params.shoulder_width) * 0.39
+    # Shoulder width is measured acromion to acromion, so the joint belongs
+    # close to that bony point rather than tucked inside the chest. It was at
+    # 0.39 to stop the arm reading as detached in a T-pose, where the arm
+    # extends sideways and its root is hidden anyway. With the arms down that
+    # same position buries the whole upper arm inside the chest, which is
+    # narrower than the shoulders. The joint ball bridges what is left.
+    torso_edge = float(params.shoulder_width) * 0.45
     for side, sign in (("L", 1.0), ("R", -1.0)):
         clav_x = sign * half_shoulder * 0.35
         arm_x = sign * torso_edge
