@@ -67,6 +67,10 @@ class RateLimitExceededError(Exception):
     pass
 
 
+class WearLogNotFoundError(Exception):
+    pass
+
+
 class UnauthorizedError(Exception):
     pass
 
@@ -76,6 +80,10 @@ class InvalidTokenError(Exception):
 
 
 class InvalidCredentialsError(Exception):
+    pass
+
+
+class InvalidRefreshTokenError(Exception):
     pass
 
 
@@ -184,6 +192,35 @@ async def storage_unavailable_handler(
             "storage_unavailable",
             "Media storage is temporarily unavailable.",
         ),
+    )
+
+
+async def invalid_refresh_token_handler(
+    _request: Request, _exc: InvalidRefreshTokenError
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=401,
+        content=error_body(
+            "invalid_refresh_token",
+            "The refresh token is invalid or expired. Sign in again.",
+        ),
+    )
+
+
+async def avatar_unavailable_handler(_request: Request, exc: Exception) -> JSONResponse:
+    return JSONResponse(
+        status_code=503,
+        content=error_body(
+            "avatar_unavailable",
+            str(exc) or "Avatar generation is unavailable. Try again shortly.",
+        ),
+    )
+
+
+async def wear_log_not_found_handler(_request: Request, _exc: WearLogNotFoundError) -> JSONResponse:
+    return JSONResponse(
+        status_code=404,
+        content=error_body("wear_log_not_found", "No calendar entry for that date."),
     )
 
 

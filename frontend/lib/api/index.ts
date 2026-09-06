@@ -10,6 +10,13 @@ import type {
   PersistedProfile,
   ProfilePersistRequest,
   RecommendationResponse,
+  AvatarBuildResponse,
+  CaptureCheckResponse,
+  GapResponse,
+  WardrobeUsageResponse,
+  WearLog,
+  WearLogListResponse,
+  ShoppingResponse,
   RegisterResponse,
   TokenResponse,
   WardrobeItem,
@@ -32,6 +39,86 @@ export function login(email: string, password: string) {
     body: { email, password },
     auth: false,
   });
+}
+
+export async function logout(refreshToken: string) {
+  // Revoking server-side matters more than the response: a token left valid
+  // outlives the browser session that discarded it.
+  await apiRequest<void>("/v1/auth/logout", {
+    method: "POST",
+    body: { refresh_token: refreshToken },
+    auth: false,
+  });
+}
+
+export function buildAvatar(
+  heightCm: number,
+  photos: { front: File; side?: File | null; back?: File | null },
+) {
+  const form = new FormData();
+  form.append("height_cm", String(heightCm));
+  form.append("front", photos.front);
+  if (photos.side) form.append("side", photos.side);
+  if (photos.back) form.append("back", photos.back);
+  return apiUpload<AvatarBuildResponse>("/v1/avatar/build", form);
+}
+
+export async function fetchMediaObjectUrl(assetId: string): Promise<string> {
+  // The viewer needs bytes, and an in-memory storage backend has no URL a
+  // browser can follow. Fetching with the session token works for every backend.
+  const { getAccessToken } = await import("@/lib/auth/session");
+  const response = await fetch(`/v1/media/${assetId}/content`, {
+    headers: { Authorization: `Bearer ${getAccessToken() ?? ""}` },
+  });
+  if (!response.ok) throw new Error("Could not download the avatar.");
+  return URL.createObjectURL(await response.blob());
+}
+
+export function listCalendar(start?: string, end?: string) {
+  const query = new URLSearchParams();
+  if (start) query.set("start", start);
+  if (end) query.set("end", end);
+  const suffix = query.toString() ? `?${query}` : "";
+  return apiRequest<WearLogListResponse>(`/v1/calendar${suffix}`);
+}
+
+export function logWear(entry: {
+  worn_on: string;
+  item_ids?: string[];
+  occasion?: string | null;
+  note?: string | null;
+  planned?: boolean;
+}) {
+  return apiRequest<WearLog>("/v1/calendar", { method: "POST", body: entry });
+}
+
+export function deleteWearLog(wornOn: string) {
+  return apiRequest<void>(`/v1/calendar/${wornOn}`, { method: "DELETE" });
+}
+
+export function getWardrobeUsage() {
+  return apiRequest<WardrobeUsageResponse>("/v1/calendar/usage");
+}
+
+export function getWardrobeGaps() {
+  // Both endpoints take an empty body. Passing {} is required: without a body
+  // apiRequest would send a GET.
+  return apiRequest<GapResponse>("/v1/recommendations/gaps", { method: "POST", body: {} });
+}
+
+export function getShoppingRecommendations() {
+  return apiRequest<ShoppingResponse>("/v1/recommendations/shopping", {
+    method: "POST",
+    body: {},
+  });
+}
+
+export function checkCapture(photos: { front: File; side?: File | null; back?: File | null }) {
+  const form = new FormData();
+  form.append("front", photos.front);
+  if (photos.side) form.append("side", photos.side);
+  if (photos.back) form.append("back", photos.back);
+  return apiUpload<CaptureCheckResponse>("/v1/avatar/check", form);
 }
 
 export function getCurrentProfile() {

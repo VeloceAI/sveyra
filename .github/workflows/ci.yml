@@ -47,7 +47,10 @@ jobs:
           cache-dependency-path: backend/requirements.txt
 
       - name: Install dependencies
-        run: pip install -r backend/requirements.txt
+        # Only what Alembic needs. Installing the whole backend would drag in the
+        # human engine via a relative editable path, which does not resolve from
+        # the repository root, and this job has no use for it either way.
+        run: pip install "alembic==1.16.4" "sqlalchemy==2.0.42" "psycopg[binary]==3.2.9"
 
       - name: Single migration head
         # More than one head means two branches added migrations in parallel.
@@ -56,6 +59,34 @@ jobs:
           heads=$(alembic heads | grep -c . || true)
           echo "heads: $heads"
           test "$heads" -eq 1
+
+  human-engine:
+    name: Human Engine
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: human-engine
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: human-engine/pyproject.toml
+
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+
+      - name: Lint
+        run: ruff check .
+
+      - name: Test
+        run: pytest -q
+
+      - name: Build a human
+        # Proves the CLI path end to end, not just the library.
+        run: python -m sveyra_human.cli build-parametric --height 184 --out /tmp/ci.glb
 
   frontend:
     name: Frontend

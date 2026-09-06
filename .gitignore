@@ -14,6 +14,3 @@ htmlcov/
 *.log
 .DS_Store
 .claude/
-*-sa.json
-*service-account*.json
-gcp-credentials.json

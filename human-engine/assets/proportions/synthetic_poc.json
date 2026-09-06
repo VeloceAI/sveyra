@@ -1,0 +1,56 @@
+{
+  "targets": {
+    "chest_width": {
+      "height_cm": 0.05035860704730686,
+      "weight_kg": 0.16945757727954552,
+      "_intercept": 12.996913034893584
+    },
+    "waist_width": {
+      "height_cm": -0.12558534160230375,
+      "weight_kg": 0.3465568058974262,
+      "_intercept": 26.580846020412586
+    },
+    "hip_width": {
+      "height_cm": 0.010733180832545954,
+      "weight_kg": 0.22360556667063636,
+      "_intercept": 17.15072567844253
+    },
+    "chest_depth": {
+      "height_cm": -0.005745016957026317,
+      "weight_kg": 0.14652197250195187,
+      "_intercept": 11.238434508062474
+    },
+    "waist_depth": {
+      "height_cm": -0.1154866710125835,
+      "weight_kg": 0.26755952742251854,
+      "_intercept": 20.521841340913532
+    },
+    "hip_depth": {
+      "height_cm": -0.032495814899489044,
+      "weight_kg": 0.1911178820232574,
+      "_intercept": 14.659115080862042
+    },
+    "shoulder_width": {
+      "height_cm": 0.2449996960281612,
+      "weight_kg": 1.111481726594445e-07,
+      "_intercept": 5.759417540221496e-05
+    },
+    "thigh_width": {
+      "height_cm": -0.004896186519580993,
+      "weight_kg": 0.12486329876260979,
+      "_intercept": 9.577132804987816
+    },
+    "upper_arm_radius": {
+      "height_cm": 0.005604404484543473,
+      "weight_kg": 0.03567420958959577,
+      "_intercept": 2.735839927786014
+    }
+  },
+  "predictors": [
+    "height_cm",
+    "weight_kg"
+  ],
+  "provenance": "synthetic",
+  "sample_count": 400,
+  "notes": "Fitted on engine-generated bodies. Proves the mapping, not real anatomy."
+}

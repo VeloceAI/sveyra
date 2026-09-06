@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 
 from app.avatar.deps import build_avatar
+from app.avatar.errors import AvatarUnavailableError
 from app.avatar.port import AvatarPort
 from app.core.config import settings
 from app.core.errors import (
@@ -10,6 +11,7 @@ from app.core.errors import (
     EmailAlreadyRegisteredError,
     EmptyMediaUploadError,
     InvalidCredentialsError,
+    InvalidRefreshTokenError,
     InvalidTokenError,
     MediaAssetNotFoundError,
     MediaDeletionIncompleteError,
@@ -20,14 +22,18 @@ from app.core.errors import (
     RateLimitExceededError,
     UnauthorizedError,
     UserNotFoundError,
+    VisionUnavailableError,
     WardrobeEmptyError,
     WardrobeItemNotFoundError,
     WardrobeMediaMissingError,
+    WearLogNotFoundError,
     auth_rate_limit_exceeded_handler,
+    avatar_unavailable_handler,
     body_profile_not_found_handler,
     email_already_registered_handler,
     empty_media_upload_handler,
     invalid_credentials_handler,
+    invalid_refresh_token_handler,
     invalid_token_handler,
     media_asset_not_found_handler,
     media_deletion_incomplete_handler,
@@ -45,9 +51,12 @@ from app.core.errors import (
     wardrobe_empty_handler,
     wardrobe_item_not_found_handler,
     wardrobe_media_missing_handler,
+    wear_log_not_found_handler,
 )
 from app.routes.auth_routes import router as auth_router
+from app.routes.avatar_routes import router as avatar_router
 from app.routes.body_profile_routes import router as body_profile_router
+from app.routes.calendar_routes import router as calendar_router
 from app.routes.health_routes import router as health_router
 from app.routes.media_asset_routes import router as media_asset_router
 from app.routes.outfit_routes import router as outfit_router
@@ -60,7 +69,6 @@ from app.storage.port import StoragePort
 from app.stylist.deps import build_stylist
 from app.stylist.port import StylistPort
 from app.vision.deps import build_vision
-from app.vision.errors import VisionUnavailableError
 from app.vision.port import VisionPort
 
 
@@ -77,7 +85,7 @@ def create_app(
     app.state.storage = storage if storage is not None else build_storage()
     app.state.vision = vision if vision is not None else build_vision()
     app.state.stylist = stylist if stylist is not None else build_stylist()
-    app.state.avatar = avatar if avatar is not None else build_avatar()
+    app.state.avatar = avatar if avatar is not None else build_avatar(app.state.storage)
 
     app.add_exception_handler(404, not_found_handler)
     app.add_exception_handler(RequestValidationError, request_validation_handler)
@@ -90,7 +98,10 @@ def create_app(
     app.add_exception_handler(EmptyMediaUploadError, empty_media_upload_handler)
     app.add_exception_handler(MediaUploadTooLargeError, media_upload_too_large_handler)
     app.add_exception_handler(StorageUnavailableError, storage_unavailable_handler)
-    app.add_exception_handler(MediaDeletionIncompleteError, media_deletion_incomplete_handler)
+    app.add_exception_handler(
+        MediaDeletionIncompleteError,
+        media_deletion_incomplete_handler,
+    )
     app.add_exception_handler(
         MediaReferenceAlreadyClaimedError,
         media_reference_already_claimed_handler,
@@ -98,6 +109,10 @@ def create_app(
     app.add_exception_handler(UnauthorizedError, unauthorized_handler)
     app.add_exception_handler(InvalidTokenError, invalid_token_handler)
     app.add_exception_handler(InvalidCredentialsError, invalid_credentials_handler)
+    app.add_exception_handler(
+        InvalidRefreshTokenError,
+        invalid_refresh_token_handler,
+    )
     app.add_exception_handler(
         EmailAlreadyRegisteredError,
         email_already_registered_handler,
@@ -113,9 +128,13 @@ def create_app(
     )
     app.add_exception_handler(VisionUnavailableError, vision_unavailable_handler)
     app.add_exception_handler(RateLimitExceededError, rate_limit_exceeded_handler)
+    app.add_exception_handler(AvatarUnavailableError, avatar_unavailable_handler)
+    app.add_exception_handler(WearLogNotFoundError, wear_log_not_found_handler)
 
     app.include_router(health_router)
     app.include_router(auth_router, prefix="/v1")
+    app.include_router(avatar_router, prefix="/v1")
+    app.include_router(calendar_router, prefix="/v1")
     app.include_router(profile_router, prefix="/v1")
     app.include_router(body_profile_router, prefix="/v1")
     app.include_router(wardrobe_router, prefix="/v1")

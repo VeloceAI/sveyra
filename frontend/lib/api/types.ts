@@ -24,6 +24,7 @@ export type RegisterResponse = {
 
 export type TokenResponse = {
   access_token: string;
+  refresh_token: string;
   token_type: string;
 };
 
@@ -126,4 +127,79 @@ export type OutfitCreateRequest = {
   occasion: string;
   item_ids: string[];
   rationale: Record<string, unknown>;
+};
+
+export type AvatarBuildResponse = {
+  asset_id: string;
+  backend: string;
+  source_views: number;
+  measurements: Record<string, number>;
+  body_parameters: Record<string, number | null>;
+  confidence: { overall: number; views: Record<string, number>; warnings: string[] };
+  profiling_ms: Record<string, number>;
+};
+
+export type GapCategory = "top" | "bottom" | "shoes";
+
+export type WardrobeGap = {
+  category: GapCategory;
+  priority: "high";
+  reason: string;
+};
+
+export type GapResponse = { gaps: WardrobeGap[] };
+
+export type ShoppingProduct = {
+  id: string;
+  name: string;
+  brand: string;
+  price: number;
+  url: string;
+  category: GapCategory;
+  image_url: string | null;
+};
+
+export type ShoppingResponse = { products: ShoppingProduct[] };
+
+export type WearLog = {
+  id: string;
+  user_id: string;
+  worn_on: string;
+  outfit_id: string | null;
+  item_ids: string[];
+  occasion: string | null;
+  note: string | null;
+  planned: boolean;
+};
+
+export type WearLogListResponse = {
+  entries: WearLog[];
+  start: string;
+  end: string;
+  total: number;
+};
+
+export type WardrobeUsageResponse = {
+  most_worn: { item_id: string; times_worn: number }[];
+  never_worn_item_ids: string[];
+  logged_days: number;
+};
+
+export type CaptureInstruction = {
+  severity: "blocking" | "advisory";
+  message: string;
+  code: string;
+};
+
+export type CaptureViewGuidance = {
+  view: string;
+  usable: boolean;
+  framing_score: number;
+  instructions: CaptureInstruction[];
+};
+
+export type CaptureCheckResponse = {
+  ready: boolean;
+  views: Record<string, CaptureViewGuidance>;
+  overall: string[];
 };

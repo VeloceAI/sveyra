@@ -1,10 +1,7 @@
-from uuid import uuid4
-
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from fastapi.testclient import TestClient
-
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.orm import sessionmaker
 
 from app.models.media_asset import MediaAsset
 from app.storage.deps import get_storage
