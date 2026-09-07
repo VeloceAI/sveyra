@@ -27,6 +27,7 @@ import numpy as np  # noqa: E402
 
 from sveyra_human.body.anatomy import measurements  # noqa: E402
 from sveyra_human.body.figures import DEFAULT_HEIGHT_CM, figure  # noqa: E402
+from sveyra_human.canonical.collision import body_volumes  # noqa: E402
 from sveyra_human.canonical.deformation import deform_canonical_human  # noqa: E402
 from sveyra_human.canonical.rig import load_canonical_rig  # noqa: E402
 
@@ -116,6 +117,13 @@ def main() -> int:
             # Each figure has its own skeleton: a child is not a scaled adult.
             "bones": bone_table(deformed),
             "measurements": {k: round(float(v), 1) for k, v in measurements(params).items()},
+            # Rigid volumes, so a viewer can refuse a pose that drives a limb
+            # into the body. Per figure, because a child's are not an adult's
+            # scaled down.
+            "volumes": {
+                group: [c.to_dict() for c in capsules]
+                for group, capsules in body_volumes(body, deformed).items()
+            },
         }
 
     OUT.parent.mkdir(parents=True, exist_ok=True)

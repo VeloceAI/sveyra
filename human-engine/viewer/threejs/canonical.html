@@ -82,7 +82,7 @@ footer{position:fixed;bottom:0;left:0;right:0;padding:12px 20px;z-index:5;pointe
 fetch("canonical_data.json").then(function (r) { return r.text(); }).then(function (text) {
   document.getElementById("canonical-data").textContent = text;
   // poses.js first: canonical.js reads POSES while it builds the panel.
-  ["poses.js", "canonical.js"].reduce(function (chain, file) {
+  ["poses.js", "constraints.js", "canonical.js"].reduce(function (chain, file) {
     return chain.then(function () {
       return new Promise(function (done) {
         const el = document.createElement("script");

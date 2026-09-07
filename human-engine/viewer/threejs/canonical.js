@@ -66,6 +66,7 @@ let skeleton = null;
 let bones = [];
 let helper = null;
 let wire = null;
+let boundary = null;
 
 function build(kind) {
   if (mesh) {
@@ -118,6 +119,13 @@ function build(kind) {
 
   figure = kind;
   indexBones();
+
+  // Measured in the bind pose, so bones that are anatomically joined do not
+  // read as collisions for the rest of the session.
+  boundary = new BodyBoundary(entry.volumes || {}, byName, bones);
+  mesh.updateMatrixWorld(true);
+  boundary.calibrate();
+
   applyPose("stand", false);
   readout();
 }
@@ -216,9 +224,13 @@ function readout() {
       return `<dt>${row[0]}</dt><dd>${row[1].toFixed(1)}<u>cm</u></dd>`;
     })
     .join("");
+  const limited =
+    allowed < 0.995
+      ? ` · held at ${Math.round(allowed * 100)}% of the pose, the rest puts a limb inside the body`
+      : "";
   document.getElementById("joint").textContent = held
-    ? `${held.name} — drag to rotate`
-    : "click the body to pick the bone under the pointer";
+    ? `${held.name} — drag to rotate${limited}`
+    : `click the body to pick the bone under the pointer${limited}`;
   document.getElementById("stat").textContent =
     `${DATA.vertexCount.toLocaleString()} vertices · ${DATA.triangleCount.toLocaleString()} triangles · ` +
     `${DATA.figures[figure].bones.names.length} bones · skinned on GPU`;
@@ -296,6 +308,7 @@ let sequence = [];
 let playing = null;
 let blend = null;
 let turntable = false;
+let allowed = 1;
 
 function indexBones() {
   byName.clear();
@@ -326,6 +339,26 @@ function applyPose(key, animate, yawOverride) {
     (pose.offset && pose.offset.z) || 0,
   );
 
+  // How much of the pose the body actually allows. A reaching arm is mostly
+  // reachable; it is only the last part of it that goes through the ribs.
+  const from = bones.map(function (b) {
+    return b.quaternion.clone();
+  });
+  const share = boundary
+    ? resolve(boundary, bones, from, to, function (k) {
+        bones.forEach(function (bone, i) {
+          bone.quaternion.slerpQuaternions(from[i], to[i], k);
+        });
+        mesh.updateMatrixWorld(true);
+      })
+    : 1;
+  if (share < 1) {
+    bones.forEach(function (bone, i) {
+      to[i] = from[i].clone().slerp(to[i], share);
+    });
+  }
+  allowed = share;
+
   if (!animate) {
     bones.forEach(function (bone, i) {
       bone.quaternion.copy(to[i]);
@@ -334,10 +367,11 @@ function applyPose(key, animate, yawOverride) {
     mesh.position.copy(offset);
     return;
   }
+  bones.forEach(function (bone, i) {
+    bone.quaternion.copy(from[i]);
+  });
   blend = {
-    from: bones.map(function (b) {
-      return b.quaternion.clone();
-    }),
+    from: from,
     to: to,
     lead: bones.map(function (b) {
       return leadFor(b.name);
@@ -364,6 +398,7 @@ function stepBlend(now) {
     const own = Math.max(0, Math.min(1, (t - lead) / (1 - lead)));
     bone.quaternion.slerpQuaternions(blend.from[i], blend.to[i], smooth(own));
   });
+  readout();
 
   const k = smooth(t);
   mesh.rotation.y = blend.fromYaw + (blend.toYaw - blend.fromYaw) * k;
