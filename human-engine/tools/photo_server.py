@@ -21,6 +21,7 @@ import json
 import pathlib
 import sys
 import traceback
+from dataclasses import replace
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -30,7 +31,10 @@ import numpy as np  # noqa: E402
 from PIL import Image  # noqa: E402
 
 from sveyra_human.api.engine import SveyraHumanEngine  # noqa: E402
+from sveyra_human.body.anatomy import measurements  # noqa: E402
+from sveyra_human.body.figures import FigureProportions  # noqa: E402
 from sveyra_human.body.parameters import BodyParameters  # noqa: E402
+from sveyra_human.canonical.deformation import deform_canonical_human  # noqa: E402
 from sveyra_human.vision.silhouette import silhouette_from_segmentation  # noqa: E402
 from sveyra_human.vision.torso_extraction import extract as extract_torso  # noqa: E402
 
@@ -108,7 +112,16 @@ class Handler(SimpleHTTPRequestHandler):
             self._json(422, {"error": f"{type(exc).__name__}: {exc}"})
 
 
-def reconstruct(engine, pose, image: np.ndarray, height_cm: float) -> dict:
+def _kind_from(params: BodyParameters) -> str:
+    """Man, woman or child, from height and the hip-to-chest relationship."""
+    if float(params.height) < 140.0:
+        return "child"
+    return "woman" if float(params.hip_width) >= float(params.chest_width) else "man"
+
+
+def reconstruct(
+    engine, pose, image: np.ndarray, height_cm: float, figure_kind: str | None = None
+) -> dict:
     """Photograph to a body, reporting what the fit could and could not see."""
     mask = np.squeeze(silhouette_from_segmentation(engine._segmenter.segment(image)))
 
@@ -133,20 +146,31 @@ def reconstruct(engine, pose, image: np.ndarray, height_cm: float) -> dict:
     # are used when the arms were clear of the body at all three levels.
     if torso is not None and torso.usable:
         cm = torso.centimetres()
-        artifact = engine.build_parametric(
-            BodyParameters(
-                height=height_cm,
-                chest_width=cm["chest"],
-                waist_width=cm["waist"],
-                hip_width=cm["hip"],
-            ),
-            with_uv=True,
+        params = BodyParameters(
+            height=height_cm,
+            chest_width=cm["chest"],
+            waist_width=cm["waist"],
+            hip_width=cm["hip"],
         )
         source = "measured widths"
     else:
-        artifact = engine.build(front=image, height_cm=height_cm)
+        params = engine.fit_from_silhouettes({"front": mask > 0.5}, height_cm)
         source = "silhouette optimiser"
-    mesh = artifact._mesh
+
+    # A figure type only fills what the photograph did not say. Where the fit
+    # gave a width, that width wins; the type supplies the proportions no single
+    # front-on view can see, and choosing it by hips against chest is the one
+    # cue a silhouette does carry.
+    kind = figure_kind or _kind_from(params)
+    params = replace(params, proportions=FigureProportions(kind))
+
+    # The canonical mesh rather than the generated surface: fixed topology,
+    # hands, feet, a face and a 163 bone rig, so a body can be posed, textured
+    # and dressed later without any of it being rebuilt.
+    body, canonical_rig, report = deform_canonical_human(params)
+    # Render form: split at UV seams, triangulated. The canonical vertex count
+    # stays the topology contract; this is what a viewer can draw.
+    mesh = body.to_surface_mesh(with_uv=True)
 
     verts = (mesh.vertices * 0.01).astype(np.float32)
     verts[:, 0] -= float(verts[:, 0].mean())
@@ -160,7 +184,13 @@ def reconstruct(engine, pose, image: np.ndarray, height_cm: float) -> dict:
         else (Handler.pose_error if pose is None else "no person found"),
         "positions": base64.b64encode(verts.tobytes()).decode(),
         "normals": base64.b64encode(mesh.normals().astype(np.float32).tobytes()).decode(),
-        "measurements": {k: round(float(v), 1) for k, v in artifact.measurements.items()},
+        "figure": kind,
+        "vertices": int(body.vertex_count),
+        "render_vertices": int(mesh.vertex_count),
+        "triangles": int(mesh.face_count),
+        "bones": len(canonical_rig.bones),
+        "clamped": list(report.clamped_fields),
+        "measurements": {k: round(float(v), 1) for k, v in measurements(params).items()},
         "coverage": round(float(mask.mean()), 4),
         # Said out loud rather than left for someone to discover: the fit solves
         # six torso numbers, so anything else in this body is proportion, not
