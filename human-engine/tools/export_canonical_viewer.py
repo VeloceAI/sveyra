@@ -68,10 +68,21 @@ def bone_table(rig) -> dict:
     for index, parent in enumerate(parents):
         if parent >= 0:
             local[index] = heads[index] - heads[parent]
+    # Direction each bone points at rest. Poses are authored anatomically, as a
+    # bend or a twist, and this is what lets the client turn that into a
+    # rotation in the bone's own frame. The rig rests in an A-pose with the arms
+    # already down, so no axis can be assumed from the bone's name.
+    tails = np.array([bone.tail_cm for bone in rig.bones], dtype=np.float64) * 0.01
+    direction = tails - heads
+    lengths = np.linalg.norm(direction, axis=1, keepdims=True)
+    direction = direction / np.where(lengths < 1e-9, 1.0, lengths)
+
     return {
         "names": [bone.name for bone in rig.bones],
         "parents": parents,
         "local": [[round(float(v), 6) for v in row] for row in local],
+        "direction": [[round(float(v), 5) for v in row] for row in direction],
+        "restHead": [[round(float(v), 5) for v in row] for row in heads],
     }
 
 

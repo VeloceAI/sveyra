@@ -117,6 +117,8 @@ function build(kind) {
   scene.add(helper);
 
   figure = kind;
+  indexBones();
+  applyPose("stand", false);
   readout();
 }
 
@@ -223,9 +225,11 @@ function readout() {
 }
 
 function resetPose() {
-  bones.forEach(function (bone) {
-    bone.rotation.set(0, 0, 0);
-  });
+  sequence = [];
+  playing = null;
+  blend = null;
+  applyPose("stand", true);
+  paintSequence();
   readout();
 }
 
@@ -263,13 +267,159 @@ function start() {
   });
   document.getElementById("reset").addEventListener("click", resetPose);
 
+  buildPosePanel();
   build(DATA.order[0]);
   resize();
   place();
-  (function tick() {
+  (function tick(now) {
     requestAnimationFrame(tick);
+    stepBlend(now || 0);
+    stepSequence(now || 0);
+    if (turntable && mesh) mesh.rotation.y += 0.006;
     renderer.render(scene, camera);
-  })();
+  })(0);
+}
+
+
+// Poses, and a sequence you can build by clicking.
+//
+// Selecting a pose applies it and appends it to the sequence, and the badge on
+// the button is its position in that order. Play walks the sequence, easing
+// into each pose and holding it long enough to be looked at, which is the point
+// of an outfit check.
+const HOLD_MS = 900;
+const EASE_MS = 600;
+
+const byName = new Map();
+let restRotations = [];
+let sequence = [];
+let playing = null;
+let blend = null;
+let turntable = false;
+
+function indexBones() {
+  byName.clear();
+  DATA.figures[figure].bones.names.forEach(function (name, i) {
+    byName.set(name, i);
+  });
+  restRotations = bones.map(function (b) {
+    return b.quaternion.clone();
+  });
+}
+
+// Every bone moves, including the ones a pose does not mention: they return to
+// rest, so a pose is the whole figure rather than a delta on the last one.
+function applyPose(key, animate) {
+  const pose = POSES[key];
+  if (!pose || !bones.length) return;
+  const targets = poseTargets(pose, bones, byName, DATA.figures[figure].bones.direction);
+
+  const to = bones.map(function (bone, i) {
+    const wanted = targets.get(bone);
+    return wanted ? restRotations[i].clone().multiply(wanted) : restRotations[i].clone();
+  });
+  const yaw = ((pose.root && pose.root.yaw) || 0) * (Math.PI / 180);
+
+  if (!animate) {
+    bones.forEach(function (bone, i) {
+      bone.quaternion.copy(to[i]);
+    });
+    mesh.rotation.y = yaw;
+    return;
+  }
+  blend = {
+    from: bones.map(function (b) {
+      return b.quaternion.clone();
+    }),
+    to: to,
+    fromYaw: mesh.rotation.y,
+    toYaw: yaw,
+    started: performance.now(),
+  };
+}
+
+function stepBlend(now) {
+  if (!blend) return;
+  const t = Math.min(1, (now - blend.started) / EASE_MS);
+  const k = t * t * (3 - 2 * t);
+  bones.forEach(function (bone, i) {
+    bone.quaternion.slerpQuaternions(blend.from[i], blend.to[i], k);
+  });
+  mesh.rotation.y = blend.fromYaw + (blend.toYaw - blend.fromYaw) * k;
+  if (t >= 1) blend = null;
+}
+
+function stepSequence(now) {
+  if (!playing) return;
+  if (now < playing.until) return;
+  if (playing.at >= sequence.length) {
+    playing = null;
+    paintSequence();
+    return;
+  }
+  applyPose(sequence[playing.at], true);
+  playing.at += 1;
+  playing.until = now + EASE_MS + HOLD_MS;
+  paintSequence();
+}
+
+function toggleInSequence(key) {
+  const at = sequence.indexOf(key);
+  if (at >= 0) sequence.splice(at, 1);
+  else sequence.push(key);
+  applyPose(key, true);
+  paintSequence();
+}
+
+function paintSequence() {
+  for (const button of document.getElementById("poses").children) {
+    const key = button.dataset.pose;
+    const at = sequence.indexOf(key);
+    const badge = button.querySelector("em");
+    badge.textContent = at >= 0 ? String(at + 1) : "";
+    button.setAttribute("aria-pressed", String(at >= 0));
+    const running = playing && sequence[playing.at - 1] === key;
+    button.classList.toggle("running", Boolean(running));
+  }
+  const play = document.getElementById("play");
+  play.disabled = sequence.length === 0;
+  play.textContent = playing
+    ? `Playing ${playing.at} of ${sequence.length}`
+    : sequence.length
+      ? `Play sequence (${sequence.length})`
+      : "Play sequence";
+}
+
+function buildPosePanel() {
+  const host = document.getElementById("poses");
+  host.innerHTML = "";
+  for (const [key, pose] of Object.entries(POSES)) {
+    const button = document.createElement("button");
+    button.className = "pick pose";
+    button.type = "button";
+    button.dataset.pose = key;
+    button.title = pose.note;
+    button.innerHTML = `<span>${pose.label}</span><em></em>`;
+    button.addEventListener("click", function () {
+      toggleInSequence(key);
+    });
+    host.appendChild(button);
+  }
+  document.getElementById("play").addEventListener("click", function () {
+    if (!sequence.length) return;
+    playing = { at: 0, until: 0 };
+    paintSequence();
+  });
+  document.getElementById("clear").addEventListener("click", function () {
+    sequence = [];
+    playing = null;
+    applyPose("stand", true);
+    paintSequence();
+  });
+  document.getElementById("turntable").addEventListener("change", function (e) {
+    turntable = e.target.checked;
+  });
+  paintSequence();
 }
 
 start();
