@@ -309,7 +309,7 @@ function indexBones() {
 
 // Every bone moves, including the ones a pose does not mention: they return to
 // rest, so a pose is the whole figure rather than a delta on the last one.
-function applyPose(key, animate) {
+function applyPose(key, animate, yawOverride) {
   const pose = POSES[key];
   if (!pose || !bones.length) return;
   const targets = poseTargets(pose, bones, byName, DATA.figures[figure].bones.direction);
@@ -318,7 +318,8 @@ function applyPose(key, animate) {
     const wanted = targets.get(bone);
     return wanted ? restRotations[i].clone().multiply(wanted) : restRotations[i].clone();
   });
-  const yaw = ((pose.root && pose.root.yaw) || 0) * (Math.PI / 180);
+  const degrees = yawOverride === undefined ? (pose.root && pose.root.yaw) || 0 : yawOverride;
+  const yaw = degrees * (Math.PI / 180);
   const offset = new THREE.Vector3(
     (pose.offset && pose.offset.x) || 0,
     (pose.offset && pose.offset.y) || 0,
@@ -370,17 +371,36 @@ function stepBlend(now) {
   if (t >= 1) blend = null;
 }
 
+// The sequence being played is a list of steps, whether it came from clicking
+// poses or from a named routine, so there is one player rather than two.
 function stepSequence(now) {
   if (!playing) return;
   if (now < playing.until) return;
-  if (playing.at >= sequence.length) {
-    playing = null;
-    paintSequence();
-    return;
+
+  if (playing.at >= playing.steps.length) {
+    if (!playing.loop) {
+      playing = null;
+      paintSequence();
+      return;
+    }
+    playing.at = 0;
   }
-  applyPose(sequence[playing.at], true);
+
+  const step = playing.steps[playing.at];
+  applyPose(step.pose, true, step.yaw);
   playing.at += 1;
-  playing.until = now + EASE_MS + HOLD_MS;
+  playing.until = now + EASE_MS + (step.hold || HOLD_MS);
+  paintSequence();
+}
+
+function play(steps, loop, name) {
+  if (!steps.length) return;
+  playing = { steps: steps, at: 0, until: 0, loop: Boolean(loop), name: name || "" };
+  paintSequence();
+}
+
+function stop() {
+  playing = null;
   paintSequence();
 }
 
@@ -402,13 +422,16 @@ function paintSequence() {
     const running = playing && sequence[playing.at - 1] === key;
     button.classList.toggle("running", Boolean(running));
   }
-  const play = document.getElementById("play");
-  play.disabled = sequence.length === 0;
-  play.textContent = playing
-    ? `Playing ${playing.at} of ${sequence.length}`
+  const button = document.getElementById("play");
+  button.disabled = sequence.length === 0 && !playing;
+  button.textContent = playing
+    ? `Stop — ${playing.name || "sequence"} ${playing.at}/${playing.steps.length}`
     : sequence.length
       ? `Play sequence (${sequence.length})`
       : "Play sequence";
+  for (const named of document.getElementById("routines").children) {
+    named.setAttribute("aria-pressed", String(Boolean(playing) && playing.name === named.textContent));
+  }
 }
 
 function buildPosePanel() {
@@ -427,13 +450,33 @@ function buildPosePanel() {
     host.appendChild(button);
   }
   document.getElementById("play").addEventListener("click", function () {
-    if (!sequence.length) return;
-    playing = { at: 0, until: 0 };
-    paintSequence();
+    if (playing) return stop();
+    play(
+      sequence.map(function (key) {
+        return { pose: key, hold: HOLD_MS };
+      }),
+      document.getElementById("loop").checked,
+      "sequence",
+    );
   });
+
+  // The named routines. Programmable: they come from the SEQUENCES table.
+  const routines = document.getElementById("routines");
+  for (const [key, routine] of Object.entries(SEQUENCES)) {
+    const button = document.createElement("button");
+    button.className = "pick";
+    button.type = "button";
+    button.textContent = routine.label;
+    button.title = routine.note;
+    button.addEventListener("click", function () {
+      if (playing && playing.name === routine.label) return stop();
+      play(routine.steps, routine.loop, routine.label);
+    });
+    routines.appendChild(button);
+  }
   document.getElementById("clear").addEventListener("click", function () {
     sequence = [];
-    playing = null;
+    stop();
     applyPose("stand", true);
     paintSequence();
   });

@@ -26,7 +26,9 @@ const LIMITS = [
   ["upperarm", { flex: [-60, 180], abduct: [-40, 180], twist: [-90, 90] }],
   ["lowerarm", { flex: [0, 150], abduct: [0, 0], twist: [-80, 80] }],
   ["wrist", { flex: [-70, 80], abduct: [-20, 30], twist: [-10, 10] }],
-  ["clavicle", { flex: [-15, 25], abduct: [-10, 30], twist: [-8, 8] }],
+  // The scapula rotates upward through about sixty degrees over a full arm
+  // elevation, so this is wider than the small clavicular range it looks like.
+  ["clavicle", { flex: [-20, 30], abduct: [-15, 55], twist: [-10, 10] }],
   ["upperleg", { flex: [-30, 120], abduct: [-30, 45], twist: [-40, 45] }],
   ["lowerleg", { flex: [-135, 0], abduct: [0, 0], twist: [0, 0] }],
   ["foot", { flex: [-50, 20], abduct: [-15, 15], twist: [-10, 10] }],
@@ -112,12 +114,16 @@ const POSES = {
     label: "Reach up",
     note: "Shows a top riding up, a binding armhole, sleeves run short.",
     joints: {
-      "clavicle.L": { abduct: 12 },
-      "clavicle.R": { abduct: 12 },
-      "upperarm01.L": { abduct: 118 },
-      "upperarm01.R": { abduct: 118 },
-      "lowerarm01.L": { flex: 12 },
-      "lowerarm01.R": { flex: 12 },
+      // Scapulohumeral rhythm: roughly two degrees at the humerus for every
+      // one at the scapula. Raising the arm 120 degrees purely at the shoulder
+      // joint, which an earlier version did, drags the deltoid away from a
+      // torso that never moved, and the arm reads as cut off at the shoulder.
+      "clavicle.L": { abduct: 40, flex: 6 },
+      "clavicle.R": { abduct: 40, flex: 6 },
+      "upperarm01.L": { abduct: 80 },
+      "upperarm01.R": { abduct: 80 },
+      "lowerarm01.L": { flex: 14 },
+      "lowerarm01.R": { flex: 14 },
       spine04: { flex: -4 },
       spine05: { flex: -4 },
     },
@@ -126,12 +132,14 @@ const POSES = {
     label: "Arms crossed",
     note: "Tightness across the upper back and through the shoulder.",
     joints: {
-      "clavicle.L": { flex: 14 },
-      "clavicle.R": { flex: 14 },
-      "upperarm01.L": { flex: 42, abduct: -14 },
-      "upperarm01.R": { flex: 42, abduct: -14 },
-      "lowerarm01.L": { flex: 96 },
-      "lowerarm01.R": { flex: 96 },
+      // The scapula protracts as the arms come across, and the upper arms stay
+      // low so the elbows sit in front of the ribs rather than inside them.
+      "clavicle.L": { flex: 20 },
+      "clavicle.R": { flex: 20 },
+      "upperarm01.L": { flex: 34, abduct: -8, twist: 20 },
+      "upperarm01.R": { flex: 34, abduct: -8, twist: 20 },
+      "lowerarm01.L": { flex: 88 },
+      "lowerarm01.R": { flex: 88 },
     },
   },
   sit: {
@@ -258,3 +266,54 @@ function poseTargets(pose, bones, byName, directions) {
   }
   return targets;
 }
+
+
+// Sequences, as data.
+//
+// A step names a pose, how long to hold it and optionally a yaw to override the
+// pose's own, which is what lets one turn pose serve both sides. Adding a
+// routine means adding an entry here, not writing code.
+//
+// The fit check follows what people actually film: walk in, stop and pause,
+// then turn slowly through every angle with a pause at the front, each side and
+// the back, because a viewer needs a moment at each to read the garment.
+const SEQUENCES = {
+  fitCheck: {
+    label: "Fit check",
+    note: "Walk in, pause, turn slowly through every angle.",
+    loop: true,
+    steps: [
+      { pose: "stride", hold: 500 },
+      { pose: "stand", hold: 1100 },
+      { pose: "threeQuarter", hold: 800 },
+      { pose: "profile", hold: 900 },
+      { pose: "back", hold: 1100 },
+      { pose: "profile", yaw: -90, hold: 900 },
+      { pose: "threeQuarter", yaw: -35, hold: 800 },
+      { pose: "stand", hold: 1200 },
+    ],
+  },
+  stressTest: {
+    label: "Fit stress",
+    note: "The four movements that find where a garment pulls.",
+    loop: true,
+    steps: [
+      { pose: "stand", hold: 700 },
+      { pose: "reachUp", hold: 1200 },
+      { pose: "armsCrossed", hold: 1100 },
+      { pose: "sit", hold: 1400 },
+      { pose: "stride", hold: 900 },
+    ],
+  },
+  sway: {
+    label: "Idle sway",
+    note: "A short loop, so the figure is never perfectly still.",
+    loop: true,
+    steps: [
+      { pose: "stand", hold: 900 },
+      { pose: "contrapposto", hold: 1200 },
+      { pose: "stand", hold: 700 },
+      { pose: "threeQuarter", yaw: 12, hold: 900 },
+    ],
+  },
+};
