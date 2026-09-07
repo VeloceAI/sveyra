@@ -94,6 +94,75 @@ class SveyraEngineAvatar(AvatarPort):
             "ready": all(g.usable for g in results.values()) and "front" in results,
         }
 
+    def build_canonical_preview(
+        self,
+        height_cm: float,
+        measurements: dict[str, float] | None = None,
+    ) -> tuple[AvatarResult, dict[str, object]]:
+        """Build the detailed rigged topology, optionally fitted to measurements."""
+        import tempfile
+        from pathlib import Path
+
+        from sveyra_human.export.canonical_gltf import export_canonical_skinned_glb
+
+        engine, BodyParameters = _load()
+        instance = engine(self._quality)
+        deformation: dict[str, object] = {
+            "parameter_fitted": False,
+            "method": None,
+            "supported_fields": [],
+            "applied_ratios": {},
+            "clamped_fields": [],
+        }
+        if measurements:
+            body, rig, report = instance.fit_canonical_parameters(
+                BodyParameters(height=height_cm, **measurements)
+            )
+            deformation = report.to_dict()
+        else:
+            body, rig = instance.build_canonical_rigged_seed(height_cm)
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory) / "canonical-human.glb"
+            export_canonical_skinned_glb(body, rig, target)
+            reference = self._storage.put(target.read_bytes())
+
+        return AvatarResult(backend="sveyra-3d", mesh_reference=reference), {
+            "stage": (
+                "canonical_parameter_fitted"
+                if deformation["parameter_fitted"]
+                else "canonical_rigged_seed"
+            ),
+            "topology_id": body.topology_id,
+            "topology_version": body.topology_version,
+            "rig_id": rig.rig_id,
+            "rig_version": rig.rig_version,
+            "height_cm": body.height_cm,
+            "vertex_count": body.vertex_count,
+            "triangle_count": body.triangle_count,
+            "joint_count": rig.joint_count,
+            "rigged": True,
+            "parameter_fitted": bool(deformation["parameter_fitted"]),
+            "identity_fitted": False,
+            "photoreal_ready": False,
+            "deformation_method": deformation["method"],
+            "supported_measurements": deformation["supported_fields"],
+            "applied_measurement_ratios": deformation["applied_ratios"],
+            "clamped_measurements": deformation["clamped_fields"],
+            "limitations": [
+                (
+                    "Cross-sectional measurements are fitted, but body lengths and "
+                    "photo identity landmarks are not fitted yet."
+                    if deformation["parameter_fitted"]
+                    else (
+                        "Neutral canonical shape scaled to height; body identity "
+                        "is not fitted yet."
+                    )
+                ),
+                "No person-specific face, skin, eyes, hair, or appearance is included.",
+                "The rest rig has no production corrective shapes or animation clips yet.",
+            ],
+        }
+
     def _store(self, artifact: object) -> str:
         import tempfile
         from pathlib import Path

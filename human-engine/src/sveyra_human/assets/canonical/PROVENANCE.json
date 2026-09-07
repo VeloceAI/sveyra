@@ -1,0 +1,61 @@
+{
+  "asset_id": "sveyra-hm08-body-v0.1",
+  "derived_file": "hm08_body_cc0.obj",
+  "derived_sha256": "b013ab2867f3fd924a9edfc4a1820698250c2543642b51057491498c6fed2bc0",
+  "license_file": "CC0-1.0.md",
+  "license_id": "CC0-1.0",
+  "source": {
+    "commit": "437dd513888a92399d1d3200d2e80859fae55abc",
+    "file": "src/mpfb/data/3dobjs/base.obj",
+    "repository": "https://github.com/makehumancommunity/mpfb2",
+    "sha256": "bea00279464133e86b634220cd2774ebf3b470de280d11222a6b2269e4a8d950"
+  },
+  "topology": {
+    "boundary_edges": 0,
+    "components": 1,
+    "degenerate_faces": 0,
+    "non_manifold_edges": 0,
+    "polygons": 13378,
+    "triangles_after_triangulation": 26756,
+    "uv_complete": true,
+    "vertices": 13380,
+    "watertight": true
+  },
+  "rig": {
+    "derived_file": "hm08_rig_v0.1.json",
+    "derived_sha256": "df33618b997f9873a88857aaf50e3143918f6bb6ef330279a303ace526de146d",
+    "rig_id": "sveyra-hm08-standard-rig",
+    "rig_version": "0.1",
+    "source_files": [
+      {
+        "file": "src/mpfb/data/rigs/standard/rig.default.json",
+        "license_basis": "MPFB LICENSE.md defines bundled rigs as CC0 assets",
+        "sha256": "3dd01e5e547439f54adbb4317173cb6c36cb917ff01f0dea9f985abebb8100f2"
+      },
+      {
+        "file": "src/mpfb/data/rigs/standard/weights.default.json",
+        "license_basis": "per-file metadata declares CC0",
+        "sha256": "e2623c088b05eb0677d04ff4ae701c98264634ade7b8a6393f437d50f84e04c2"
+      }
+    ],
+    "source_repository": "https://github.com/makehumancommunity/mpfb2",
+    "source_revision": "437dd513888a92399d1d3200d2e80859fae55abc",
+    "statistics": {
+      "bones": 163,
+      "canonical_vertices": 13380,
+      "dropped_body_influences_over_four": 5535,
+      "dropped_body_weight_before_renormalization": 110.92818647,
+      "filtered_non_body_weight_entries": 17473,
+      "source_weight_entries": 58388,
+      "weighted_bones_after_filtering": 125
+    },
+    "transformation": {
+      "description": "Topologically ordered the hierarchy, transformed default rest coordinates into centimetre Y-up/+Z-forward space, retained body-vertex weights, selected the strongest four influences per vertex, and renormalized every row.",
+      "tool": "human-engine/tools/import_canonical_rig.py"
+    }
+  },
+  "transformation": {
+    "description": "Selected OBJ group 'body', removed unreferenced helper and joint geometry, and deterministically remapped position and UV indices.",
+    "tool": "human-engine/tools/audit_canonical_mesh.py"
+  }
+}

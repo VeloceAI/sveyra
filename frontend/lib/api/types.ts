@@ -140,6 +140,51 @@ export type AvatarBuildResponse = {
   profiling_ms: Record<string, number>;
 };
 
+export type CanonicalAvatarResponse = {
+  asset_id: string;
+  backend: string;
+  stage: "canonical_rigged_seed" | "canonical_parameter_fitted";
+  topology_id: string;
+  topology_version: string;
+  rig_id: string;
+  rig_version: string;
+  height_cm: number;
+  vertex_count: number;
+  triangle_count: number;
+  joint_count: number;
+  rigged: boolean;
+  parameter_fitted: boolean;
+  identity_fitted: boolean;
+  photoreal_ready: boolean;
+  deformation_method: string | null;
+  supported_measurements: string[];
+  applied_measurement_ratios: Record<string, number>;
+  clamped_measurements: string[];
+  limitations: string[];
+};
+
+export type HumanEnginePreviewRequest = {
+  height_cm: number;
+  shoulder_width_cm?: number;
+  shoulder_depth_cm?: number;
+  neck_width_cm?: number;
+  chest_width_cm?: number;
+  chest_depth_cm?: number;
+  waist_width_cm?: number;
+  waist_depth_cm?: number;
+  hip_width_cm?: number;
+  hip_depth_cm?: number;
+  upper_arm_radius_cm?: number;
+  forearm_radius_cm?: number;
+  thigh_width_cm?: number;
+  thigh_depth_cm?: number;
+  calf_width_cm?: number;
+  calf_depth_cm?: number;
+  ankle_width_cm?: number;
+  head_width_cm?: number;
+  head_depth_cm?: number;
+};
+
 export type GapCategory = "top" | "bottom" | "shoes";
 
 export type WardrobeGap = {

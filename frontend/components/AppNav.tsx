@@ -1,14 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { logout } from "@/lib/api";
-import { clearSession, getAccessToken, getRefreshToken } from "@/lib/auth/session";
+import {
+  clearSession,
+  getRefreshToken,
+} from "@/lib/auth/session";
 
 const LINKS = [
   { href: "/profile", label: "Profile" },
   { href: "/avatar", label: "Avatar" },
+  { href: "/human-engine", label: "Human Engine" },
   { href: "/wardrobe", label: "Wardrobe" },
   { href: "/recommend", label: "Recommend" },
   { href: "/gaps", label: "Gaps" },
@@ -17,21 +20,7 @@ const LINKS = [
 ];
 
 export function AppNav() {
-  const pathname = usePathname();
   const router = useRouter();
-  const [ready, setReady] = useState(false);
-
-  useEffect(() => {
-    if (!getAccessToken()) {
-      router.replace(`/login?next=${encodeURIComponent(pathname)}`);
-      return;
-    }
-    setReady(true);
-  }, [pathname, router]);
-
-  if (!ready) {
-    return <p className="empty">Checking sessionâ€¦</p>;
-  }
 
   return (
     <header className="nav">
@@ -45,20 +34,22 @@ export function AppNav() {
           </Link>
         ))}
       </nav>
-      <button
-        type="button"
-        className="secondary"
-        onClick={async () => {
-          const refreshToken = getRefreshToken();
-          if (refreshToken) {
-            await logout(refreshToken).catch(() => undefined);
-          }
-          clearSession();
-          router.replace("/login");
-        }}
-      >
-        Log out
-      </button>
+      {process.env.NODE_ENV === "development" ? (
+        <span className="dev-badge">Local dev</span>
+      ) : (
+        <button
+          type="button"
+          className="secondary"
+          onClick={async () => {
+            const refreshToken = getRefreshToken();
+            if (refreshToken) await logout(refreshToken).catch(() => undefined);
+            clearSession();
+            router.replace("/login");
+          }}
+        >
+          Log out
+        </button>
+      )}
     </header>
   );
 }

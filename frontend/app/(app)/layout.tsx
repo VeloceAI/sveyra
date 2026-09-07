@@ -1,10 +1,5 @@
-import { AppNav } from "@/components/AppNav";
+import { AuthenticatedShell } from "@/components/AuthenticatedShell";
 
 export default function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <>
-      <AppNav />
-      <main>{children}</main>
-    </>
-  );
+  return <AuthenticatedShell>{children}</AuthenticatedShell>;
 }

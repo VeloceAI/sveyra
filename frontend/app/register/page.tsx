@@ -63,7 +63,7 @@ export default function RegisterPage() {
             />
           </label>
           <button type="submit" disabled={loading}>
-            {loading ? "Creatingâ€¦" : "Create account"}
+            {loading ? "Creating…" : "Create account"}
           </button>
         </form>
         <p>

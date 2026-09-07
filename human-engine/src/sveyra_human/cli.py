@@ -50,6 +50,14 @@ def _build_parser() -> argparse.ArgumentParser:
     build.add_argument("--quality", choices=sorted(SUBDIVISIONS), default="balanced")
     build.add_argument("--json", action="store_true", help="print metadata as JSON")
 
+    canonical = sub.add_parser(
+        "build-canonical-seed",
+        help="Build the reviewed neutral fixed-topology body as a rigged GLB.",
+    )
+    canonical.add_argument("--height", type=float, required=True, help="standing height in cm")
+    canonical.add_argument("--out", type=Path, default=Path("canonical-human.glb"))
+    canonical.add_argument("--static", action="store_true", help="omit the canonical rest rig")
+
     photo = sub.add_parser(
         "build-from-photos",
         help="Build a GLB human from photographs.",
@@ -124,6 +132,26 @@ def _run_photo_build(args: argparse.Namespace) -> int:
     return 0
 
 
+def _run_canonical_build(args: argparse.Namespace) -> int:
+    from sveyra_human.export.gltf import export_glb
+
+    engine = SveyraHumanEngine()
+    body, rig = engine.build_canonical_rigged_seed(args.height)
+    mesh = body.to_surface_mesh(with_uv=False)
+    if args.static:
+        path = export_glb(mesh, args.out, name="SveyraCanonicalHuman")
+    else:
+        from sveyra_human.export.canonical_gltf import export_canonical_skinned_glb
+
+        path = export_canonical_skinned_glb(body, rig, args.out)
+    print(f"wrote {path}")
+    print(f"  vertices     {mesh.vertex_count:,}")
+    print(f"  triangles    {mesh.face_count:,}")
+    print(f"  joints       {0 if args.static else rig.joint_count:,}")
+    print("  note: neutral rigged seed; not yet a reconstruction of a specific person")
+    return 0
+
+
 def _run_info() -> int:
     print("SVEYRA Human Engine 0.1.0")
     print("  working:  parametric body, silhouette fitting, photo segmentation,")
@@ -139,6 +167,8 @@ def main(argv: list[str] | None = None) -> int:
         return _run_build(args)
     if args.command == "build-from-photos":
         return _run_photo_build(args)
+    if args.command == "build-canonical-seed":
+        return _run_canonical_build(args)
     return _run_info()
 
 

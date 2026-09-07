@@ -63,7 +63,7 @@ function LoginForm() {
             />
           </label>
           <button type="submit" disabled={loading}>
-            {loading ? "Signing inâ€¦" : "Sign in"}
+            {loading ? "Signing in…" : "Sign in"}
           </button>
         </form>
         <p>
@@ -76,7 +76,7 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<p className="empty">Loadingâ€¦</p>}>
+    <Suspense fallback={<p className="empty">Loading…</p>}>
       <LoginForm />
     </Suspense>
   );

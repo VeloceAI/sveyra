@@ -31,6 +31,7 @@ Implemented:
 - `/health`
 - `/v1/auth/register`
 - `/v1/auth/login`
+- `POST /v1/auth/dev-session` (local/dev/test only)
 - `/v1/profile`
 - `/v1/wardrobe`
 - `PATCH /v1/wardrobe/{item_id}`
@@ -44,11 +45,24 @@ Implemented:
 - `/v1/recommendations`
 - `POST /v1/recommendations/gaps`
 - `POST /v1/recommendations/shopping`
+- `POST /v1/avatar/check`
+- `POST /v1/avatar/build`
+- `POST /v1/avatar/canonical-preview`
+- `POST /v1/avatar/developer-preview`
 
-Named for later milestones (not implemented):
+`POST /v1/avatar/canonical-preview` creates a stored, authenticated GLB using
+the commercially cleared fixed topology and its 163-joint skin. The response
+explicitly reports `identity_fitted=false` and `photoreal_ready=false`; this is
+the deformable foundation used while guided identity reconstruction is being
+built, not a claim that height alone reconstructs a person.
 
-
-- `/v1/avatar`
+`POST /v1/avatar/developer-preview` accepts JSON body dimensions in centimetres
+and returns a fitted canonical GLB plus topology, rig, deformation, clamping,
+and stage evidence. The frontend studio is `/human-engine`. During `next dev`,
+the UI obtains a normal JWT from `POST /v1/auth/dev-session` so developers do
+not see the login screen. That endpoint returns `404` outside local, dev,
+development, and test backend environments; protected APIs never bypass JWT
+validation.
 
 ## Recommendations
 

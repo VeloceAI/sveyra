@@ -11,6 +11,8 @@ import type {
   ProfilePersistRequest,
   RecommendationResponse,
   AvatarBuildResponse,
+  CanonicalAvatarResponse,
+  HumanEnginePreviewRequest,
   CaptureCheckResponse,
   GapResponse,
   WardrobeUsageResponse,
@@ -61,6 +63,27 @@ export function buildAvatar(
   if (photos.side) form.append("side", photos.side);
   if (photos.back) form.append("back", photos.back);
   return apiUpload<AvatarBuildResponse>("/v1/avatar/build", form);
+}
+
+export function createDevelopmentSession() {
+  return apiRequest<TokenResponse>("/v1/auth/dev-session", {
+    method: "POST",
+    body: {},
+    auth: false,
+  });
+}
+
+export function buildCanonicalPreview(heightCm: number) {
+  const form = new FormData();
+  form.append("height_cm", String(heightCm));
+  return apiUpload<CanonicalAvatarResponse>("/v1/avatar/canonical-preview", form);
+}
+
+export function buildHumanEnginePreview(payload: HumanEnginePreviewRequest) {
+  return apiRequest<CanonicalAvatarResponse>("/v1/avatar/developer-preview", {
+    method: "POST",
+    body: payload,
+  });
 }
 
 export async function fetchMediaObjectUrl(assetId: string): Promise<string> {
