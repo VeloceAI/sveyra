@@ -53,10 +53,10 @@ const material = new THREE.MeshStandardMaterial({
   skinning: true,
 });
 const wireMaterial = new THREE.MeshBasicMaterial({
-  color: 0x9fb3c8,
+  color: 0x3d4654,
   wireframe: true,
   transparent: true,
-  opacity: 0.3,
+  opacity: 0.55,
   skinning: true,
 });
 
@@ -319,12 +319,18 @@ function applyPose(key, animate) {
     return wanted ? restRotations[i].clone().multiply(wanted) : restRotations[i].clone();
   });
   const yaw = ((pose.root && pose.root.yaw) || 0) * (Math.PI / 180);
+  const offset = new THREE.Vector3(
+    (pose.offset && pose.offset.x) || 0,
+    (pose.offset && pose.offset.y) || 0,
+    (pose.offset && pose.offset.z) || 0,
+  );
 
   if (!animate) {
     bones.forEach(function (bone, i) {
       bone.quaternion.copy(to[i]);
     });
     mesh.rotation.y = yaw;
+    mesh.position.copy(offset);
     return;
   }
   blend = {
@@ -332,20 +338,35 @@ function applyPose(key, animate) {
       return b.quaternion.clone();
     }),
     to: to,
+    lead: bones.map(function (b) {
+      return leadFor(b.name);
+    }),
     fromYaw: mesh.rotation.y,
     toYaw: yaw,
+    fromPos: mesh.position.clone(),
+    toPos: offset,
     started: performance.now(),
   };
 }
 
+const smooth = (t) => t * t * (3 - 2 * t);
+
 function stepBlend(now) {
   if (!blend) return;
   const t = Math.min(1, (now - blend.started) / EASE_MS);
-  const k = t * t * (3 - 2 * t);
+
   bones.forEach(function (bone, i) {
-    bone.quaternion.slerpQuaternions(blend.from[i], blend.to[i], k);
+    // Each bone waits out its lead, then covers the rest of the transition in
+    // the time that remains. Nothing starts or arrives together, which is the
+    // whole difference between a body moving and a mechanism moving.
+    const lead = blend.lead[i];
+    const own = Math.max(0, Math.min(1, (t - lead) / (1 - lead)));
+    bone.quaternion.slerpQuaternions(blend.from[i], blend.to[i], smooth(own));
   });
+
+  const k = smooth(t);
   mesh.rotation.y = blend.fromYaw + (blend.toYaw - blend.fromYaw) * k;
+  mesh.position.lerpVectors(blend.fromPos, blend.toPos, k);
   if (t >= 1) blend = null;
 }
 
