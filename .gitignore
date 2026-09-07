@@ -26,3 +26,4 @@ gcp-credentials.json
 # tools/export_viewer_data.py; the photographs are fetched, not authored here.
 human-engine/viewer/threejs/avatar_data.json
 human-engine/viewer/threejs/samples/
+human-engine/viewer/threejs/canonical_data.json

@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SVEYRA Canonical Human</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{--ground:#0D0F12;--panel:#12151A;--raise:#171B21;--line:#1E242C;
+  --edge:#2A323C;--dim:#8A93A0;--bright:#C3D3E4;--text:#E8EDF3}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--text);overflow:hidden;
+  font:14px/1.55 "IBM Plex Sans",system-ui,sans-serif}
+#stage{position:fixed;inset:0}
+canvas{display:block}
+header{position:fixed;top:0;left:0;right:0;padding:14px 20px;z-index:5;
+  pointer-events:none;display:flex;gap:14px;align-items:baseline}
+header b{font-weight:600}
+header span{font:12px/1 "IBM Plex Mono",monospace;color:var(--dim)}
+.panel{position:fixed;background:rgba(18,21,26,.94);border:1px solid var(--line);
+  border-radius:10px;padding:14px 16px;z-index:6}
+#left{top:64px;left:16px;width:210px}
+#right{top:64px;right:16px;width:212px}
+.label{font:11px/1 "IBM Plex Mono",monospace;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--dim);margin:0 0 10px}
+.label+.label{margin-top:16px}
+button.pick,button#reset{display:block;width:100%;margin-bottom:6px;padding:8px 10px;
+  background:var(--raise);color:var(--text);border:1px solid var(--line);border-radius:6px;
+  font:inherit;font-size:13px;text-align:left;cursor:pointer}
+button.pick:hover,button#reset:hover{border-color:var(--edge)}
+button.pick[aria-pressed=true]{border-color:var(--bright);background:#1a212a}
+label.check{display:flex;gap:8px;align-items:center;font-size:13px;margin:6px 0;cursor:pointer}
+dl{margin:0;display:grid;grid-template-columns:1fr auto;gap:6px 10px;font-size:13px}
+dt{color:var(--dim)} dd{margin:0;text-align:right;color:var(--bright);
+  font-family:"IBM Plex Mono",monospace}
+dd u{text-decoration:none;color:var(--dim);font-size:11px;margin-left:2px}
+footer{position:fixed;bottom:0;left:0;right:0;padding:12px 20px;z-index:5;pointer-events:none;
+  display:flex;justify-content:space-between;font:11px/1 "IBM Plex Mono",monospace;color:var(--dim)}
+</style>
+</head>
+<body>
+<div id="stage"></div>
+<header><b>SVEYRA Canonical Human</b><span id="stat">loading…</span></header>
+
+<section class="panel" id="left">
+  <p class="label">Figure</p>
+  <div id="figures"></div>
+  <p class="label">Show</p>
+  <label class="check"><input type="checkbox" id="wire"> Wireframe</label>
+  <label class="check"><input type="checkbox" id="bones"> Skeleton</label>
+  <button type="button" id="reset" style="margin-top:10px">Reset pose</button>
+</section>
+
+<section class="panel" id="right">
+  <p class="label">Measurements</p>
+  <dl id="rows"></dl>
+</section>
+
+<footer><span id="joint"></span><span>drag to orbit &middot; scroll to zoom</span></footer>
+
+<script type="application/json" id="canonical-data"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+fetch("canonical_data.json").then(function (r) { return r.text(); }).then(function (text) {
+  document.getElementById("canonical-data").textContent = text;
+  const s = document.createElement("script");
+  s.src = "canonical.js";
+  document.body.appendChild(s);
+});
+</script>
+</body>
+</html>
