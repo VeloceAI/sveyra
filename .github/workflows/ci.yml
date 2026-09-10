@@ -88,6 +88,22 @@ jobs:
         # Proves the CLI path end to end, not just the library.
         run: python -m sveyra_human.cli build-parametric --height 184 --out /tmp/ci.glb
 
+      # The motion tests read the exported viewer data, which is build output
+      # and not committed. Only this job can produce it, so they run here rather
+      # than alongside the frontend where there is no engine to export from.
+      - name: Export viewer data
+        run: python tools/export_canonical_viewer.py
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Human motion collision
+        working-directory: .
+        run: |
+          npm install --no-save three
+          node --test human-engine/tests_js/*.test.cjs
+
   frontend:
     name: Frontend
     runs-on: ubuntu-latest
@@ -110,9 +126,6 @@ jobs:
 
       - name: Test
         run: npm --workspace @sveyra/web run test
-
-      - name: Human motion collision
-        run: npm run human:test-motion
 
       - name: Build
         run: npm --workspace @sveyra/web run build
