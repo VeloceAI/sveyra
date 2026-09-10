@@ -64,7 +64,7 @@ Refresh tokens, OAuth, and external identity providers are out of scope.
 
 ## Recommendations
 
-`POST /v1/recommendations` is authenticated. Identity comes from JWT `sub`. The service loads only the caller's wardrobe metadata (including optional M18 `attributes.cv`), style-profile `preferences` / `dislikes` / `budget`, and the latest body `fit_preferences` when present. Ranking runs through provider-neutral `StylistPort` (default deterministic `StubStylist`). Image bytes and StoragePort are never used. Results are ephemeral (not written to PostgreSQL). Clients may persist an accepted candidate with the existing outfits API. A future AI/LLM adapter can replace `StylistPort` without changing the HTTP contract (`occasion` in, `item_ids` + `rationale` out).
+`POST /v1/recommendations` is authenticated. Identity comes from JWT `sub`. The service loads only the caller's wardrobe metadata (including optional M18 `attributes.cv`), style-profile `preferences` / `dislikes` / `budget`, and the latest body `fit_preferences` when present. Optional `required_item_ids`, `excluded_item_ids`, and `replacement_item_id` power style-this-item and same-slot swaps; every supplied ID is checked against the caller's wardrobe with safe not-found semantics. Ranking runs through provider-neutral `StylistPort` (default deterministic `StubStylist`). Image bytes and StoragePort are never used. Results are ephemeral (not written to PostgreSQL). Clients may persist an accepted candidate with the existing outfits API. A future AI/LLM adapter can replace `StylistPort` without changing the product flow.
 
 ## Garment Enrichment (Vision)
 

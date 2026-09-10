@@ -8,7 +8,11 @@ from app.avatar.port import AvatarPort
 from app.core.config import settings
 from app.core.errors import MediaUploadTooLargeError
 from app.models.user import User
-from app.schemas.avatar_schema import AvatarBuildResponse, CaptureCheckResponse
+from app.schemas.avatar_schema import (
+    AvatarBuildResponse,
+    CanonicalAvatarResponse,
+    CaptureCheckResponse,
+)
 from app.services.media_asset_service import MediaAssetService
 from app.storage.port import StoragePort
 
@@ -78,6 +82,57 @@ async def check_capture(
         ready=bool(report["ready"]),
         views=report["views"],
         overall=list(report["overall"]),
+    )
+
+
+async def build_canonical_avatar(
+    height_cm: float,
+    session: Session,
+    user: User,
+    avatar: AvatarPort,
+    storage: StoragePort,
+    measurements: dict[str, float] | None = None,
+) -> CanonicalAvatarResponse:
+    if not hasattr(avatar, "build_canonical_preview"):
+        raise AvatarUnavailableError(
+            "The configured avatar backend cannot build a canonical 3D preview. "
+            "Set AVATAR_BACKEND=sveyra."
+        )
+
+    result, report = avatar.build_canonical_preview(  # type: ignore[attr-defined]
+        height_cm, measurements
+    )
+    asset = MediaAssetService(storage=storage).register_reference(
+        session, user.id, str(result.mesh_reference)
+    )
+    return CanonicalAvatarResponse(
+        asset_id=str(asset.id),
+        backend=result.backend,
+        stage=str(report["stage"]),
+        topology_id=str(report["topology_id"]),
+        topology_version=str(report["topology_version"]),
+        rig_id=str(report["rig_id"]),
+        rig_version=str(report["rig_version"]),
+        height_cm=float(report["height_cm"]),
+        vertex_count=int(report["vertex_count"]),
+        triangle_count=int(report["triangle_count"]),
+        joint_count=int(report["joint_count"]),
+        rigged=bool(report["rigged"]),
+        parameter_fitted=bool(report["parameter_fitted"]),
+        identity_fitted=bool(report["identity_fitted"]),
+        photoreal_ready=bool(report["photoreal_ready"]),
+        deformation_method=(
+            str(report["deformation_method"])
+            if report["deformation_method"] is not None
+            else None
+        ),
+        supported_measurements=[str(value) for value in report["supported_measurements"]],
+        applied_measurement_ratios={
+            str(name): float(value)
+            for name, value in dict(report["applied_measurement_ratios"]).items()
+        },
+        clamped_measurements=[str(value) for value in report["clamped_measurements"]],
+        limitations=[str(value) for value in report["limitations"]],
     )
 
 

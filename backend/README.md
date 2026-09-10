@@ -31,6 +31,7 @@ Implemented:
 - `/health`
 - `/v1/auth/register`
 - `/v1/auth/login`
+- `POST /v1/auth/dev-session` (local/dev/test only)
 - `/v1/profile`
 - `/v1/wardrobe`
 - `PATCH /v1/wardrobe/{item_id}`
@@ -44,19 +45,32 @@ Implemented:
 - `/v1/recommendations`
 - `POST /v1/recommendations/gaps`
 - `POST /v1/recommendations/shopping`
+- `POST /v1/avatar/check`
+- `POST /v1/avatar/build`
+- `POST /v1/avatar/canonical-preview`
+- `POST /v1/avatar/developer-preview`
 
-Named for later milestones (not implemented):
+`POST /v1/avatar/canonical-preview` creates a stored, authenticated GLB using
+the commercially cleared fixed topology and its 163-joint skin. The response
+explicitly reports `identity_fitted=false` and `photoreal_ready=false`; this is
+the deformable foundation used while guided identity reconstruction is being
+built, not a claim that height alone reconstructs a person.
 
-
-- `/v1/avatar`
+`POST /v1/avatar/developer-preview` accepts JSON body dimensions in centimetres
+and returns a fitted canonical GLB plus topology, rig, deformation, clamping,
+and stage evidence. The frontend studio is `/human-engine`. During `next dev`,
+the UI obtains a normal JWT from `POST /v1/auth/dev-session` so developers do
+not see the login screen. That endpoint returns `404` outside local, dev,
+development, and test backend environments; protected APIs never bypass JWT
+validation.
 
 ## Recommendations
 
-`POST /v1/recommendations` — authenticated. Body: `{ "occasion": "casual" }`. Returns ranked `recommendations` with `item_ids` and `rationale`. Uses owned wardrobe metadata (including optional `attributes.cv`), style preferences/dislikes/budget, and latest fit preferences when present. Does not read image bytes or call StoragePort. Ranking runs through `StylistPort` (default deterministic stub).
+`POST /v1/recommendations` — authenticated. Body: `{ "occasion": "casual", "required_item_ids": [], "excluded_item_ids": [], "replacement_item_id": null }`. Returns ranked `recommendations` with `item_ids` and `rationale`. Required items are kept in every look; exclusions never appear; `replacement_item_id` excludes that garment and requires another owned garment in the same wardrobe slot while preserving the supplied required items. All constraint IDs are ownership checked with safe not-found semantics. Uses owned wardrobe metadata (including optional `attributes.cv`), style preferences/dislikes/budget, and latest fit preferences when present. Does not read image bytes or call StoragePort. Ranking runs through `StylistPort` (default deterministic stub).
 
 ## Garment enrichment
 
-`POST /v1/wardrobe/{item_id}/enrich` — authenticated. Loads the wardrobe item owned by the JWT user, resolves the linked media asset, reads bytes via `StoragePort.get(opaque reference)`, runs `VisionPort.analyze_garment`, and updates existing wardrobe fields (`category`, `color`, `attributes`). Clients never send storage references or image bytes. Default `VISION_BACKEND=stub` uses deterministic `StubVision` for local/tests; real CV providers are not integrated yet. Category/color columns update only when confidence is at least `0.75`; lower-confidence suggestions are stored under `attributes.cv` without overwriting user values. Missing linked media returns `404 wardrobe_media_missing`. Vision failures return `503 vision_unavailable`.
+`POST /v1/wardrobe/{item_id}/enrich` — authenticated. Loads the wardrobe item owned by the JWT user, resolves the linked media asset, reads bytes via `StoragePort.get(opaque reference)`, runs `VisionPort.analyze_garment`, and updates existing wardrobe fields (`category`, `color`, `attributes`). Clients never send storage references or image bytes. Default `VISION_BACKEND=stub` uses deterministic `StubVision` for local/tests. `VISION_BACKEND=vertex` uses the managed Gemini publisher endpoint with Application Default Credentials and schema-constrained JSON; it never exposes a Google token or raw image to the browser. Category/color columns update only when confidence is at least `0.75`; lower-confidence suggestions are stored under `attributes.cv` without overwriting user values. Provider/model and billed token counts are stored as provenance. Missing linked media returns `404 wardrobe_media_missing`. Vision failures return `503 vision_unavailable`.
 
 ## Wardrobe lifecycle
 
@@ -74,7 +88,11 @@ Non-secret settings (see `.env.example`):
 - `MEDIA_ACCESS_URL_TTL_SECONDS` — short-lived access URL lifetime (default `900`, max `3600`)
 - `JWT_SECRET` — HMAC secret for access tokens. Placeholder only in `.env.example`. Never commit a real secret.
 - `JWT_ACCESS_TTL_SECONDS` — access token lifetime (default `900`, max `3600`)
-- `VISION_BACKEND` — `stub` (default). Provider-neutral vision selection; only stub is implemented.
+- `VISION_BACKEND` — `stub` (default) or `vertex` for managed Gemini garment understanding.
+- `GOOGLE_CLOUD_PROJECT` — required when `VISION_BACKEND=vertex`.
+- `GOOGLE_CLOUD_LOCATION` — Vertex location; defaults to `global`.
+- `VERTEX_VISION_MODEL_ID` — configurable model ID; defaults to `gemini-3.1-flash-lite`.
+- `VISION_TIMEOUT_SECONDS` — managed request timeout; defaults to `30`.
 - `STYLIST_BACKEND` — `stub` (default). Provider-neutral stylist selection; only deterministic stub is implemented.
 
 Protected product routes require `Authorization: Bearer <token>`. Identity is `users.id` from JWT `sub`. Do not send `user_id` to impersonate another user; unexpected request fields are rejected (`422 validation_error`).
@@ -86,7 +104,7 @@ List endpoints (`GET /v1/wardrobe`, `GET /v1/outfits`, `GET /v1/profile/{user_id
 
 Responses include `limit`, `offset`, and `total` plus the collection array.
 
-`POST /v1/recommendations` returns ephemeral, ranked outfit candidates for an occasion using the authenticated user's wardrobe metadata (`category`, `color`, `brand`, `attributes` including M18 `cv` cues), style-profile preferences/dislikes/budget, and latest body fit preferences when available. Image bytes and StoragePort/GCS are not used. Recommendations are not persisted; clients may save an accepted look via `POST /v1/outfits`. Ranking is deterministic by default behind `StylistPort` so a future AI/LLM adapter can replace it without changing the HTTP contract. An empty wardrobe returns `404 wardrobe_empty`. Insufficient items return `200` with an empty `recommendations` list.
+`POST /v1/recommendations` returns ephemeral, ranked outfit candidates for an occasion using the authenticated user's wardrobe metadata (`category`, `color`, `brand`, `attributes` including M18 `cv` cues), optional owned-item lock/exclude/replace constraints, style-profile preferences/dislikes/budget, and latest body fit preferences when available. Image bytes and StoragePort/GCS are not used. Recommendations are not persisted; clients may save an accepted look via `POST /v1/outfits`. Ranking is deterministic by default behind `StylistPort` so a future AI/LLM adapter can replace it without changing the product flow. An empty wardrobe returns `404 wardrobe_empty`. Insufficient or incompatible items return `200` with an empty `recommendations` list.
 
 ## Wardrobe gap analysis
 

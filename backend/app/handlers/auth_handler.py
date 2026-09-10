@@ -18,6 +18,10 @@ def login_user(payload: LoginRequest, session: Session) -> TokenResponse:
     return AuthService().login(session, payload)
 
 
+def create_development_session(session: Session) -> TokenResponse:
+    return AuthService().development_session(session)
+
+
 def refresh_tokens(payload: RefreshRequest, session: Session) -> TokenResponse:
     return AuthService().refresh(session, payload)
 

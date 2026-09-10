@@ -35,6 +35,10 @@ class BodyProfileNotFoundError(Exception):
     pass
 
 
+class AppearanceProfileNotFoundError(Exception):
+    pass
+
+
 class WardrobeItemNotFoundError(Exception):
     pass
 
@@ -106,9 +110,7 @@ async def not_found_handler(_request: Request, _exc: StarletteHTTPException) -> 
     )
 
 
-async def profile_not_found_handler(
-    _request: Request, _exc: ProfileNotFoundError
-) -> JSONResponse:
+async def profile_not_found_handler(_request: Request, _exc: ProfileNotFoundError) -> JSONResponse:
     return JSONResponse(
         status_code=404,
         content=error_body("profile_not_found", "Profile was not found."),
@@ -131,6 +133,15 @@ async def body_profile_not_found_handler(
     )
 
 
+async def appearance_profile_not_found_handler(
+    _request: Request, _exc: AppearanceProfileNotFoundError
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=404,
+        content=error_body("appearance_profile_not_found", "Appearance profile was not found."),
+    )
+
+
 async def wardrobe_item_not_found_handler(
     _request: Request, _exc: WardrobeItemNotFoundError
 ) -> JSONResponse:
@@ -149,9 +160,7 @@ async def media_asset_not_found_handler(
     )
 
 
-async def outfit_not_found_handler(
-    _request: Request, _exc: OutfitNotFoundError
-) -> JSONResponse:
+async def outfit_not_found_handler(_request: Request, _exc: OutfitNotFoundError) -> JSONResponse:
     return JSONResponse(
         status_code=404,
         content=error_body("outfit_not_found", "Outfit was not found."),
@@ -297,9 +306,7 @@ async def request_validation_handler(
     )
 
 
-async def wardrobe_empty_handler(
-    _request: Request, _exc: WardrobeEmptyError
-) -> JSONResponse:
+async def wardrobe_empty_handler(_request: Request, _exc: WardrobeEmptyError) -> JSONResponse:
     return JSONResponse(
         status_code=404,
         content=error_body(

@@ -1,4 +1,4 @@
-export const DEFAULT_LOGIN_REDIRECT = "/wardrobe";
+export const DEFAULT_LOGIN_REDIRECT = "/today";
 
 /**
  * Resolve a post-login redirect target from the `next` query param.

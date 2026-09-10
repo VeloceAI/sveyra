@@ -65,6 +65,7 @@ export type WardrobeItem = {
   color: string;
   brand: string;
   attributes: Record<string, unknown>;
+  media_asset_ids: string[];
 };
 
 export type WardrobeItemListResponse = {
@@ -104,6 +105,12 @@ export type RecommendationCandidate = {
   rationale: string;
 };
 
+export type RecommendationConstraints = {
+  required_item_ids?: string[];
+  excluded_item_ids?: string[];
+  replacement_item_id?: string;
+};
+
 export type RecommendationResponse = {
   occasion: string;
   recommendations: RecommendationCandidate[];
@@ -138,6 +145,51 @@ export type AvatarBuildResponse = {
   body_parameters: Record<string, number | null>;
   confidence: { overall: number; views: Record<string, number>; warnings: string[] };
   profiling_ms: Record<string, number>;
+};
+
+export type CanonicalAvatarResponse = {
+  asset_id: string;
+  backend: string;
+  stage: "canonical_rigged_seed" | "canonical_parameter_fitted";
+  topology_id: string;
+  topology_version: string;
+  rig_id: string;
+  rig_version: string;
+  height_cm: number;
+  vertex_count: number;
+  triangle_count: number;
+  joint_count: number;
+  rigged: boolean;
+  parameter_fitted: boolean;
+  identity_fitted: boolean;
+  photoreal_ready: boolean;
+  deformation_method: string | null;
+  supported_measurements: string[];
+  applied_measurement_ratios: Record<string, number>;
+  clamped_measurements: string[];
+  limitations: string[];
+};
+
+export type HumanEnginePreviewRequest = {
+  height_cm: number;
+  shoulder_width_cm?: number;
+  shoulder_depth_cm?: number;
+  neck_width_cm?: number;
+  chest_width_cm?: number;
+  chest_depth_cm?: number;
+  waist_width_cm?: number;
+  waist_depth_cm?: number;
+  hip_width_cm?: number;
+  hip_depth_cm?: number;
+  upper_arm_radius_cm?: number;
+  forearm_radius_cm?: number;
+  thigh_width_cm?: number;
+  thigh_depth_cm?: number;
+  calf_width_cm?: number;
+  calf_depth_cm?: number;
+  ankle_width_cm?: number;
+  head_width_cm?: number;
+  head_depth_cm?: number;
 };
 
 export type GapCategory = "top" | "bottom" | "shoes";
@@ -203,4 +255,105 @@ export type CaptureCheckResponse = {
   ready: boolean;
   views: Record<string, CaptureViewGuidance>;
   overall: string[];
+};
+
+export type SkinDepth = "very_light" | "light" | "medium" | "tan" | "deep" | "very_deep";
+export type Undertone = "cool" | "neutral" | "warm" | "olive";
+export type ContrastLevel = "low" | "medium" | "high";
+export type FaceShape =
+  | "unspecified"
+  | "oval"
+  | "round"
+  | "square"
+  | "heart"
+  | "oblong"
+  | "diamond";
+export type HairTexture = "straight" | "wavy" | "curly" | "coily" | "protective" | "shaved";
+export type MakeupIntensity = "none" | "natural" | "polished" | "statement";
+export type MakeupFinish = "natural" | "matte" | "dewy" | "satin";
+
+export type AppearanceProfileRequest = {
+  skin: {
+    tone_hex: string;
+    depth: SkinDepth;
+    undertone: Undertone;
+    sensitive: boolean;
+  };
+  face: { shape: FaceShape };
+  eyes: { color: string };
+  hair: {
+    color: string;
+    texture: HairTexture;
+    chemically_treated: boolean;
+  };
+  colour_analysis: { contrast: ContrastLevel };
+  makeup: {
+    intensity: MakeupIntensity;
+    finish: MakeupFinish;
+    focus: string[];
+    avoid: string[];
+  };
+  evidence: {
+    source: "self_reported" | "photo_estimate" | "professional";
+    user_confirmed: boolean;
+    confidence: number;
+  };
+};
+
+export type ColourSwatch = { name: string; hex: string };
+
+export type AppearanceProfile = AppearanceProfileRequest & {
+  id: string;
+  user_id: string;
+  palette: {
+    title: string;
+    summary: string;
+    best_colours: ColourSwatch[];
+    neutrals: ColourSwatch[];
+    metals: string[];
+    combinations: {
+      name: string;
+      colours: ColourSwatch[];
+      guidance: string;
+    }[];
+    makeup: {
+      complexion: string;
+      cheeks: string;
+      lips: string;
+      eyes: string;
+      finish: string;
+    };
+  };
+  created_at: string | null;
+  updated_at: string | null;
+};
+
+export type CapabilityStatus = "ready" | "demo" | "setup_required" | "planned";
+
+export type PlatformReadiness = {
+  parity_phase: string;
+  product_message: string;
+  personal_model: {
+    style_ready: boolean;
+    appearance_ready: boolean;
+    body_ready: boolean;
+    body_measurement_count: number;
+    wardrobe_items: number;
+    enriched_items: number;
+    core_completion_percent: number;
+    next_action: {
+      label: string;
+      href: string;
+      reason: string;
+    };
+  };
+  capabilities: {
+    key: string;
+    label: string;
+    status: CapabilityStatus;
+    provider: string;
+    summary: string;
+    limitation: string | null;
+    href: string | null;
+  }[];
 };

@@ -9,7 +9,15 @@ from sqlalchemy.pool import StaticPool
 from app.db.base import Base
 from app.db.session import get_db
 from app.main import create_app
-from app.models import BodyProfile, MediaAsset, Outfit, StyleProfile, User, WardrobeItem
+from app.models import (
+    AppearanceProfile,
+    BodyProfile,
+    MediaAsset,
+    Outfit,
+    StyleProfile,
+    User,
+    WardrobeItem,
+)
 
 assert User.__tablename__ == "users"
 assert StyleProfile.__tablename__ == "style_profiles"
@@ -17,6 +25,7 @@ assert BodyProfile.__tablename__ == "body_profiles"
 assert WardrobeItem.__tablename__ == "wardrobe_items"
 assert MediaAsset.__tablename__ == "media_assets"
 assert Outfit.__tablename__ == "outfits"
+assert AppearanceProfile.__tablename__ == "appearance_profiles"
 
 
 @pytest.fixture

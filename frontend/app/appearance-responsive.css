@@ -1,0 +1,38 @@
+@media (max-width: 1050px) {
+  .appearance-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .palette-panel {
+    position: static;
+  }
+}
+
+@media (max-width: 700px) {
+  .appearance-hero {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .appearance-completion {
+    width: 112px;
+    height: 112px;
+  }
+
+  .appearance-trust {
+    flex-direction: column;
+  }
+
+  .tone-picker,
+  .appearance-input-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .skin-depth-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .undertone-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

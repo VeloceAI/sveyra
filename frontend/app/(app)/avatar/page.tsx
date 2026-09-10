@@ -3,9 +3,18 @@
 import { useState } from "react";
 import AvatarViewer from "@/components/AvatarViewer";
 import { ErrorBanner } from "@/components/ErrorBanner";
-import { buildAvatar, checkCapture, fetchMediaObjectUrl } from "@/lib/api";
+import {
+  buildAvatar,
+  buildCanonicalPreview,
+  checkCapture,
+  fetchMediaObjectUrl,
+} from "@/lib/api";
 import { formatApiError } from "@/lib/api/client";
-import type { AvatarBuildResponse, CaptureCheckResponse } from "@/lib/api/types";
+import type {
+  AvatarBuildResponse,
+  CanonicalAvatarResponse,
+  CaptureCheckResponse,
+} from "@/lib/api/types";
 
 const VIEWS = [
   { key: "front", label: "Front", required: true },
@@ -21,9 +30,38 @@ export default function AvatarPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<AvatarBuildResponse | null>(null);
+  const [canonicalResult, setCanonicalResult] = useState<CanonicalAvatarResponse | null>(null);
   const [modelUrl, setModelUrl] = useState<string | null>(null);
   const [guidance, setGuidance] = useState<CaptureCheckResponse | null>(null);
   const [checking, setChecking] = useState(false);
+
+  function validHeight(): number | null {
+    const height = Number(heightCm);
+    if (!Number.isFinite(height) || height < 50 || height > 260) {
+      setError("Enter a height in centimetres between 50 and 260.");
+      return null;
+    }
+    return height;
+  }
+
+  async function onCanonicalPreview() {
+    setError(null);
+    const height = validHeight();
+    if (height === null) return;
+
+    setBusy(true);
+    setModelUrl(null);
+    setResult(null);
+    try {
+      const built = await buildCanonicalPreview(height);
+      setCanonicalResult(built);
+      setModelUrl(await fetchMediaObjectUrl(built.asset_id));
+    } catch (caught) {
+      setError(formatApiError(caught));
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function onCheck() {
     const front = files.front;
@@ -53,11 +91,8 @@ export default function AvatarPage() {
       setError("A front photo is required: it is what the body is fitted from.");
       return;
     }
-    const height = Number(heightCm);
-    if (!Number.isFinite(height) || height < 50 || height > 260) {
-      setError("Enter a height in centimetres between 50 and 260.");
-      return;
-    }
+    const height = validHeight();
+    if (height === null) return;
 
     setBusy(true);
     setModelUrl(null);
@@ -68,6 +103,7 @@ export default function AvatarPage() {
         back: files.back ?? null,
       });
       setResult(built);
+      setCanonicalResult(null);
 
       setModelUrl(await fetchMediaObjectUrl(built.asset_id));
     } catch (caught) {
@@ -120,6 +156,14 @@ export default function AvatarPage() {
         </div>
 
         <div className="capture-actions">
+          <button
+            type="button"
+            className="secondary"
+            onClick={() => void onCanonicalPreview()}
+            disabled={busy}
+          >
+            {busy ? "Building…" : "Preview rigged 3D foundation"}
+          </button>
           <button type="button" className="secondary" onClick={() => void onCheck()} disabled={checking}>
             {checking ? "Checking…" : "Check my photos"}
           </button>
@@ -154,7 +198,30 @@ export default function AvatarPage() {
         </div>
       )}
 
-      <AvatarViewer url={modelUrl} />
+      <AvatarViewer url={modelUrl} rigged={Boolean(canonicalResult)} />
+
+      {canonicalResult && (
+        <div className="avatar-report">
+          <h2>Rigged 3D foundation</h2>
+          <p>
+            {canonicalResult.vertex_count.toLocaleString()} vertices, {" "}
+            {canonicalResult.triangle_count.toLocaleString()} triangles, and {" "}
+            {canonicalResult.joint_count} joints at {canonicalResult.height_cm.toFixed(1)} cm.
+          </p>
+          <p className="muted">
+            Topology {canonicalResult.topology_id} v{canonicalResult.topology_version}; rig {" "}
+            {canonicalResult.rig_id} v{canonicalResult.rig_version}.
+          </p>
+          <p className="warning">
+            This is the deformable canonical foundation, not your reconstructed identity yet.
+          </p>
+          <ul>
+            {canonicalResult.limitations.map((limitation) => (
+              <li key={limitation}>{limitation}</li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {result && (
         <div className="avatar-report">

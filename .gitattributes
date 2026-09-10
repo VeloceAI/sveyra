@@ -1,0 +1,7 @@
+# The canonical body assets are content-addressed: PROVENANCE.json records a
+# sha256 of each file and the loader refuses anything that does not match. Git's
+# line-ending conversion rewrites them on checkout under Windows, which changes
+# the hash and makes the engine reject its own bundled mesh. Treat them as
+# binary so no platform ever rewrites a byte.
+human-engine/src/sveyra_human/assets/canonical/*.obj  -text
+human-engine/src/sveyra_human/assets/canonical/*.json -text

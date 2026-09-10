@@ -25,6 +25,8 @@ from app.schemas.auth_schema import (
     TokenResponse,
 )
 
+DEV_USER_EMAIL = "developer@sveyra.local"
+
 
 def _as_utc(value: datetime) -> datetime:
     # SQLite hands back naive datetimes even for timezone-aware columns.
@@ -49,6 +51,19 @@ class AuthService:
         user = self.repository.get_user_by_email(session, email)
         if user is None or not verify_password(payload.password, user.password_hash):
             raise InvalidCredentialsError
+        return self._issue_tokens(session, user.id)
+
+    def development_session(self, session: Session) -> TokenResponse:
+        """Create or reuse the isolated local developer and issue normal tokens."""
+        user = self.repository.get_user_by_email(session, DEV_USER_EMAIL)
+        if user is None:
+            user = self.repository.create_user(
+                session,
+                DEV_USER_EMAIL,
+                hash_password("local-development-account-not-for-login"),
+            )
+            session.commit()
+            session.refresh(user)
         return self._issue_tokens(session, user.id)
 
     def refresh(self, session: Session, payload: RefreshRequest) -> TokenResponse:

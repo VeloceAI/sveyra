@@ -1,3 +1,4 @@
+from app.models.appearance_profile import AppearanceProfile
 from app.models.body_profile import BodyProfile
 from app.models.media_asset import MediaAsset
 from app.models.outfit import Outfit
@@ -8,6 +9,7 @@ from app.models.wardrobe_item import WardrobeItem
 from app.models.wear_log import WearLog
 
 __all__ = [
+    "AppearanceProfile",
     "BodyProfile",
     "MediaAsset",
     "Outfit",

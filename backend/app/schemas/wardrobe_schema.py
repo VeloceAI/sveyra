@@ -81,6 +81,7 @@ class WardrobeItemResponse(BaseModel):
     color: str
     brand: str
     attributes: dict[str, Any]
+    media_asset_ids: list[UUID] = Field(default_factory=list)
 
 
 class WardrobeItemListResponse(BaseModel):

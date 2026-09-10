@@ -72,6 +72,8 @@ def test_upload_with_wardrobe_item_id(client: TestClient) -> None:
     response = _upload(client, headers, wardrobe_item_id=item_id)
     assert response.status_code == 200
     assert response.json()["wardrobe_item_id"] == item_id
+    item = client.get(f"/v1/wardrobe/{item_id}", headers=headers).json()
+    assert item["media_asset_ids"] == [response.json()["id"]]
 
 
 def test_upload_without_wardrobe_item_id(client: TestClient) -> None:

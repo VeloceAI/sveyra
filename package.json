@@ -6,6 +6,7 @@
     "frontend"
   ],
   "scripts": {
-    "web:dev": "npm --workspace @sveyra/web run dev"
+    "web:dev": "npm --workspace @sveyra/web run dev",
+    "human:test-motion": "node --test human-engine/tests_js/*.test.cjs"
   }
 }

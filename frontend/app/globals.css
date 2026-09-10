@@ -1,3 +1,10 @@
+@import "./appearance.css";
+@import "./human-engine.css";
+@import "./today.css";
+@import "./closet.css";
+@import "./stylist.css";
+@import "./appearance-responsive.css";
+
 :root {
   --bg: #f6f4f1;
   --surface: #ffffff;
@@ -37,7 +44,7 @@ a:hover {
 }
 
 main {
-  max-width: 920px;
+  max-width: 1440px;
   margin: 0 auto;
   padding: 1.25rem 1rem 3rem;
 }
@@ -152,6 +159,18 @@ button:disabled {
   letter-spacing: 0.04em;
 }
 
+.dev-badge {
+  border: 1px solid #99f6e4;
+  border-radius: 999px;
+  background: #f0fdfa;
+  color: #0f766e;
+  padding: 0.3rem 0.65rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .error {
   background: #fef2f2;
   color: var(--danger);
@@ -229,6 +248,7 @@ button:disabled {
 .avatar-uploads { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
 .avatar-form label { display: flex; flex-direction: column; gap: 6px; font-size: 14px; }
 .viewer { width: 100%; border-radius: 8px; overflow: hidden; background: #14161c; }
+.viewer-toolbar { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
 .viewer-placeholder {
   display: flex; align-items: center; justify-content: center;
   border: 1px dashed currentColor; border-radius: 8px; opacity: 0.45; font-size: 14px;
@@ -287,3 +307,34 @@ button:disabled {
 .capture-view ul { margin: 4px 0 0; padding-left: 20px; }
 .capture-view li.blocking { font-weight: 600; }
 .capture-view li.advisory { opacity: 0.8; }
+
+@media (max-width: 700px) {
+  .nav {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      "brand action"
+      "links links";
+    gap: 0.7rem 1rem;
+  }
+
+  .nav-brand { grid-area: brand; }
+
+  .nav-links {
+    grid-area: links;
+    width: 100%;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 0.2rem;
+    scrollbar-width: none;
+  }
+
+  .nav-links::-webkit-scrollbar { display: none; }
+  .nav-links a { flex: 0 0 auto; }
+  .dev-badge,
+  .nav > button {
+    grid-area: action;
+    justify-self: end;
+  }
+  main { padding-top: 0.85rem; }
+}

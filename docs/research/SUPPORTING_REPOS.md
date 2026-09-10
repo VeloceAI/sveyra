@@ -39,4 +39,17 @@ SAM 3D Body outputs an MHR mesh and SOMA-X accepts MHR as an identity backend,
 so the two compose without pulling in a SMPL license.
 
 CatVTON is sometimes suggested alongside IDM-VTON and StableVITON. It is also
-CC BY-NC-SA 4.0. Do not add it.
+CC BY-NC-SA 4.0. Do not add it.
+
+## Try-on sequencing
+
+Try-on begins only after the metric digital human passes its reconstruction and
+animation gates. Google Vertex AI Virtual Try-On may later be used behind
+`TryOnProvider` for fast 2D clothing previews. Those generated pixels are not
+body measurements, garment geometry, cloth simulation, or evidence of physical
+fit. Accessory support must be provided and evaluated separately rather than
+assumed from a clothing endpoint.
+
+As of 2026-09-05, the current Google model ID is `virtual-try-on-001`; the old
+`virtual-try-on-preview-08-04` endpoint has been replaced. Confirm the official
+model documentation again when M6 starts because hosted model contracts change.

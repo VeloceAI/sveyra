@@ -178,6 +178,127 @@ def test_recommendation_engine_does_not_need_storage() -> None:
     )
 
 
+def test_style_this_item_keeps_required_piece_in_every_look(client: TestClient) -> None:
+    _user_id, headers = register_and_auth(client, "rec-lock@example.com")
+    locked_shirt = _add_item(client, headers, category="shirt", color="red")
+    _add_item(client, headers, category="shirt", color="navy")
+    _add_item(client, headers, category="trousers", color="black")
+    _add_item(client, headers, category="shoes", color="white")
+
+    response = client.post(
+        "/v1/recommendations",
+        headers=headers,
+        json={"occasion": "dinner", "required_item_ids": [locked_shirt]},
+    )
+
+    assert response.status_code == 200
+    recommendations = response.json()["recommendations"]
+    assert recommendations
+    assert all(locked_shirt in candidate["item_ids"] for candidate in recommendations)
+    assert all("selected piece" in candidate["rationale"].lower() for candidate in recommendations)
+
+
+def test_excluded_item_never_appears(client: TestClient) -> None:
+    _user_id, headers = register_and_auth(client, "rec-exclude@example.com")
+    excluded_shirt = _add_item(client, headers, category="shirt", color="red")
+    kept_shirt = _add_item(client, headers, category="shirt", color="white")
+    trousers = _add_item(client, headers, category="trousers", color="black")
+
+    response = client.post(
+        "/v1/recommendations",
+        headers=headers,
+        json={"occasion": "work", "excluded_item_ids": [excluded_shirt]},
+    )
+
+    assert response.status_code == 200
+    recommendations = response.json()["recommendations"]
+    assert recommendations
+    assert all(excluded_shirt not in candidate["item_ids"] for candidate in recommendations)
+    assert {kept_shirt, trousers}.issubset(set(recommendations[0]["item_ids"]))
+
+
+def test_swap_replaces_same_slot_and_preserves_other_items(client: TestClient) -> None:
+    _user_id, headers = register_and_auth(client, "rec-swap@example.com")
+    old_shirt = _add_item(client, headers, category="shirt", color="red")
+    new_shirt = _add_item(client, headers, category="shirt", color="white")
+    trousers = _add_item(client, headers, category="trousers", color="black")
+    shoes = _add_item(client, headers, category="shoes", color="black")
+
+    response = client.post(
+        "/v1/recommendations",
+        headers=headers,
+        json={
+            "occasion": "work",
+            "required_item_ids": [trousers, shoes],
+            "replacement_item_id": old_shirt,
+        },
+    )
+
+    assert response.status_code == 200
+    recommendations = response.json()["recommendations"]
+    assert recommendations
+    for candidate in recommendations:
+        assert old_shirt not in candidate["item_ids"]
+        assert new_shirt in candidate["item_ids"]
+        assert trousers in candidate["item_ids"]
+        assert shoes in candidate["item_ids"]
+        assert "replaces the selected top slot" in candidate["rationale"].lower()
+
+
+def test_foreign_constraint_uses_safe_not_found_response(client: TestClient) -> None:
+    _user_a, headers_a = register_and_auth(client, "rec-constraint-a@example.com")
+    _user_b, headers_b = register_and_auth(client, "rec-constraint-b@example.com")
+    _add_item(client, headers_a, category="shirt")
+    _add_item(client, headers_a, category="trousers")
+    foreign = _add_item(client, headers_b, category="shirt")
+
+    response = client.post(
+        "/v1/recommendations",
+        headers=headers_a,
+        json={"occasion": "casual", "required_item_ids": [foreign]},
+    )
+
+    assert response.status_code == 404
+    assert response.json()["error"]["code"] == "wardrobe_item_not_found"
+
+
+def test_incompatible_required_slots_return_no_false_look(client: TestClient) -> None:
+    _user_id, headers = register_and_auth(client, "rec-conflict@example.com")
+    dress = _add_item(client, headers, category="dress")
+    shirt = _add_item(client, headers, category="shirt")
+    _add_item(client, headers, category="trousers")
+
+    response = client.post(
+        "/v1/recommendations",
+        headers=headers,
+        json={
+            "occasion": "party",
+            "required_item_ids": [dress, shirt],
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["recommendations"] == []
+
+
+def test_overlapping_item_constraints_are_rejected(client: TestClient) -> None:
+    _user_id, headers = register_and_auth(client, "rec-invalid-constraint@example.com")
+    item_id = _add_item(client, headers, category="shirt")
+
+    response = client.post(
+        "/v1/recommendations",
+        headers=headers,
+        json={
+            "occasion": "casual",
+            "required_item_ids": [item_id],
+            "excluded_item_ids": [item_id],
+        },
+    )
+
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "validation_error"
+
+
 def test_existing_outfit_endpoints_unchanged(client: TestClient) -> None:
     _user_id, headers = register_and_auth(client, "rec-outfit@example.com")
     shirt = _add_item(client, headers, category="shirt")

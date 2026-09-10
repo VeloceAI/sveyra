@@ -114,6 +114,117 @@ def test_the_stored_avatar_is_a_real_glb(engine_client: TestClient) -> None:
     assert built["asset_id"]
 
 
+def test_canonical_preview_returns_a_rigged_but_honest_platform_asset(
+    engine_client: TestClient,
+) -> None:
+    _user_id, headers = register_and_auth(engine_client, "canonical@example.com")
+    response = engine_client.post(
+        "/v1/avatar/canonical-preview",
+        headers=headers,
+        data={"height_cm": "184"},
+    )
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["stage"] == "canonical_rigged_seed"
+    assert body["height_cm"] == pytest.approx(184.0, abs=0.001)
+    assert body["vertex_count"] == 13_380
+    assert body["triangle_count"] == 26_756
+    assert body["joint_count"] == 163
+    assert body["rigged"] is True
+    assert body["parameter_fitted"] is False
+    assert body["identity_fitted"] is False
+    assert body["photoreal_ready"] is False
+    assert body["limitations"]
+
+    stored = engine_client.get(f"/v1/media/{body['asset_id']}/content", headers=headers)
+    assert stored.status_code == 200
+    magic, version, length = struct.unpack("<III", stored.content[:12])
+    assert magic == 0x46546C67 and version == 2
+    assert length == len(stored.content)
+
+
+def test_developer_preview_fits_measurements_into_the_canonical_human(
+    engine_client: TestClient,
+) -> None:
+    _user_id, headers = register_and_auth(engine_client, "human-engine@example.com")
+    response = engine_client.post(
+        "/v1/avatar/developer-preview",
+        headers=headers,
+        json={
+            "height_cm": 180,
+            "shoulder_width_cm": 48,
+            "chest_width_cm": 42,
+            "waist_width_cm": 36,
+            "hip_width_cm": 41,
+            "upper_arm_radius_cm": 7,
+            "thigh_width_cm": 21,
+        },
+    )
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["stage"] == "canonical_parameter_fitted"
+    assert body["parameter_fitted"] is True
+    assert body["identity_fitted"] is False
+    assert body["deformation_method"] == "rig_weighted_cross_section_v1"
+    assert body["applied_measurement_ratios"]["waist_width"] > 1.0
+    assert "waist_width" in body["supported_measurements"]
+
+    stored = engine_client.get(f"/v1/media/{body['asset_id']}/content", headers=headers)
+    assert stored.status_code == 200
+    magic, version, length = struct.unpack("<III", stored.content[:12])
+    assert magic == 0x46546C67 and version == 2
+    assert length == len(stored.content)
+
+
+def test_developer_preview_rejects_unknown_or_impossible_measurements(
+    engine_client: TestClient,
+) -> None:
+    _user_id, headers = register_and_auth(engine_client, "human-engine-invalid@example.com")
+    impossible = engine_client.post(
+        "/v1/avatar/developer-preview",
+        headers=headers,
+        json={"height_cm": 180, "waist_width_cm": -2},
+    )
+    unknown = engine_client.post(
+        "/v1/avatar/developer-preview",
+        headers=headers,
+        json={"height_cm": 180, "invented_measurement_cm": 20},
+    )
+
+    assert impossible.status_code == 422
+    assert unknown.status_code == 422
+
+
+def test_canonical_preview_requires_the_real_engine_backend(client: TestClient) -> None:
+    from app.avatar.stub import StubAvatar
+
+    client.app.state.avatar = StubAvatar()
+    _user_id, headers = register_and_auth(client, "canonical-stub@example.com")
+    response = client.post(
+        "/v1/avatar/canonical-preview",
+        headers=headers,
+        data={"height_cm": "184"},
+    )
+
+    assert response.status_code == 503
+    assert response.json()["error"]["code"] == "avatar_unavailable"
+
+
+@pytest.mark.parametrize("height", ["49", "261", "nan"])
+def test_canonical_preview_rejects_impossible_heights(
+    engine_client: TestClient, height: str
+) -> None:
+    _user_id, headers = register_and_auth(engine_client, f"height-{height}@example.com")
+    response = engine_client.post(
+        "/v1/avatar/canonical-preview",
+        headers=headers,
+        data={"height_cm": height},
+    )
+    assert response.status_code == 422
+
+
 def test_a_front_view_is_required(engine_client: TestClient) -> None:
     _user_id, headers = register_and_auth(engine_client, "noview@example.com")
     response = engine_client.post(
@@ -147,7 +258,10 @@ def test_building_an_avatar_requires_authentication(engine_client: TestClient) -
 
 
 def test_the_stub_backend_admits_it_cannot_do_this(client: TestClient) -> None:
-    """The default backend must say so rather than returning a fake avatar."""
+    """An explicitly selected stub must say so rather than returning a fake avatar."""
+    from app.avatar.stub import StubAvatar
+
+    client.app.state.avatar = StubAvatar()
     _user_id, headers = register_and_auth(client, "stub@example.com")
     response = client.post(
         "/v1/avatar/build",

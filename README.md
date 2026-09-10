@@ -108,31 +108,42 @@ Use this file to evaluate third-party repos, priority, fit for SVEYRA, and licen
 
 ## First Run
 
+Full instructions, including how to run every test suite and which external
+services need credentials, are in [`docs/RUNNING.md`](docs/RUNNING.md).
+
+The short version. Nothing below needs an API key: every external service
+defaults to a local stub.
+
 1. Install Python 3.12, Node.js 22+, Docker Desktop, and Git.
 2. Copy `.env.example` to `.env`.
-3. Start local infrastructure:
 
 ```powershell
 docker compose -f infra/docker/docker-compose.yml up -d
-```
 
-4. Start the API:
-
-```powershell
-cd backend
-python -m venv .venv
-.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
+cd database ; alembic upgrade head
+cd ../backend ; python -m venv .venv ; .venv\Scripts\Activate.ps1
+pip install -r requirements.txt -r requirements-dev.txt
 uvicorn app.main:app --reload
+
+cd ../frontend ; npm install ; npm run dev
 ```
 
-5. Start the frontend when its framework is selected:
+API on `http://localhost:8000`, app on `http://localhost:3000`. Check
+`GET /v1/platform/readiness` to see which capabilities are real and which are
+still stubs.
+
+The human engine is a separate package with its own environment, so it stays
+usable without the backend:
 
 ```powershell
-cd frontend
-npm install
-npm run dev
+cd human-engine ; python -m venv .venv ; .venv\Scripts\Activate.ps1
+pip install -e ".[dev]" ; pytest -q
+
+python tools/export_canonical_viewer.py
+python -m http.server 8810 --directory viewer/threejs
 ```
+
+Then open `http://localhost:8810/canonical.html` for the posable canonical human.
 
 ## Architecture Principle
 

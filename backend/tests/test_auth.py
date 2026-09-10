@@ -60,6 +60,29 @@ def test_login_success(client: TestClient) -> None:
     assert "password" not in body
 
 
+def test_local_development_session_skips_the_login_screen_with_real_tokens(
+    client: TestClient,
+) -> None:
+    response = client.post("/v1/auth/dev-session", json={})
+
+    assert response.status_code == 200
+    tokens = response.json()
+    assert tokens["access_token"]
+    protected = client.get(
+        "/v1/wardrobe",
+        headers={"Authorization": f"Bearer {tokens['access_token']}"},
+    )
+    assert protected.status_code == 200
+
+
+def test_development_session_is_not_exposed_in_production(
+    client: TestClient, monkeypatch,
+) -> None:
+    monkeypatch.setattr(settings, "app_env", "production")
+    response = client.post("/v1/auth/dev-session", json={})
+    assert response.status_code == 404
+
+
 def test_login_wrong_password(client: TestClient) -> None:
     client.post(
         "/v1/auth/register",

@@ -1,5 +1,7 @@
 import { apiRequest, apiUpload } from "@/lib/api/client";
 import type {
+  AppearanceProfile,
+  AppearanceProfileRequest,
   BodyProfile,
   BodyProfileListResponse,
   MediaAsset,
@@ -8,9 +10,13 @@ import type {
   OutfitCreateRequest,
   OutfitListResponse,
   PersistedProfile,
+  PlatformReadiness,
   ProfilePersistRequest,
   RecommendationResponse,
+  RecommendationConstraints,
   AvatarBuildResponse,
+  CanonicalAvatarResponse,
+  HumanEnginePreviewRequest,
   CaptureCheckResponse,
   GapResponse,
   WardrobeUsageResponse,
@@ -24,6 +30,21 @@ import type {
   WardrobeItemListResponse,
   WardrobeItemUpdateRequest,
 } from "@/lib/api/types";
+
+export function getPlatformReadiness() {
+  return apiRequest<PlatformReadiness>("/v1/platform/readiness");
+}
+
+export function getAppearanceProfile() {
+  return apiRequest<AppearanceProfile>("/v1/appearance");
+}
+
+export function saveAppearanceProfile(payload: AppearanceProfileRequest) {
+  return apiRequest<AppearanceProfile>("/v1/appearance", {
+    method: "PUT",
+    body: payload,
+  });
+}
 
 export function register(email: string, password: string) {
   return apiRequest<RegisterResponse>("/v1/auth/register", {
@@ -63,6 +84,27 @@ export function buildAvatar(
   return apiUpload<AvatarBuildResponse>("/v1/avatar/build", form);
 }
 
+export function createDevelopmentSession() {
+  return apiRequest<TokenResponse>("/v1/auth/dev-session", {
+    method: "POST",
+    body: {},
+    auth: false,
+  });
+}
+
+export function buildCanonicalPreview(heightCm: number) {
+  const form = new FormData();
+  form.append("height_cm", String(heightCm));
+  return apiUpload<CanonicalAvatarResponse>("/v1/avatar/canonical-preview", form);
+}
+
+export function buildHumanEnginePreview(payload: HumanEnginePreviewRequest) {
+  return apiRequest<CanonicalAvatarResponse>("/v1/avatar/developer-preview", {
+    method: "POST",
+    body: payload,
+  });
+}
+
 export async function fetchMediaObjectUrl(assetId: string): Promise<string> {
   // The viewer needs bytes, and an in-memory storage backend has no URL a
   // browser can follow. Fetching with the session token works for every backend.
@@ -70,7 +112,7 @@ export async function fetchMediaObjectUrl(assetId: string): Promise<string> {
   const response = await fetch(`/v1/media/${assetId}/content`, {
     headers: { Authorization: `Bearer ${getAccessToken() ?? ""}` },
   });
-  if (!response.ok) throw new Error("Could not download the avatar.");
+  if (!response.ok) throw new Error("Could not download the media asset.");
   return URL.createObjectURL(await response.blob());
 }
 
@@ -187,10 +229,13 @@ export function getMediaAccess(assetId: string) {
   return apiRequest<MediaAssetAccessResponse>(`/v1/media/${assetId}/access`);
 }
 
-export function getRecommendations(occasion: string) {
+export function getRecommendations(
+  occasion: string,
+  constraints: RecommendationConstraints = {},
+) {
   return apiRequest<RecommendationResponse>("/v1/recommendations", {
     method: "POST",
-    body: { occasion },
+    body: { occasion, ...constraints },
   });
 }
 

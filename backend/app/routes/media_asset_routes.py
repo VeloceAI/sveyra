@@ -64,9 +64,20 @@ def read_asset_content(
     user: User = Depends(get_current_user),
 ) -> Response:
     payload = get_media_asset_bytes(asset_id, session, storage, user)
-    # GLB is the only binary this serves today; anything else still downloads.
-    media_type = "model/gltf-binary" if payload[:4] == b"glTF" else "application/octet-stream"
+    media_type = _media_type(payload)
     return Response(content=payload, media_type=media_type)
+
+
+def _media_type(payload: bytes) -> str:
+    if payload[:4] == b"glTF":
+        return "model/gltf-binary"
+    if payload.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "image/png"
+    if payload.startswith(b"\xff\xd8\xff"):
+        return "image/jpeg"
+    if payload[:4] == b"RIFF" and payload[8:12] == b"WEBP":
+        return "image/webp"
+    return "application/octet-stream"
 
 
 @router.get("/{asset_id}", response_model=MediaAssetResponse)

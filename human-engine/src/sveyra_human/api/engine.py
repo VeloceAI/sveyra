@@ -26,6 +26,11 @@ from sveyra_human.vision.segmentation import BackgroundContrastSegmenter
 from sveyra_human.vision.silhouette import silhouette_from_segmentation
 
 if TYPE_CHECKING:
+    from sveyra_human.canonical import (
+        CanonicalBodyMesh,
+        CanonicalDeformationReport,
+        CanonicalRig,
+    )
     from sveyra_human.capture.validator import CaptureReport
     from sveyra_human.face.parameters import FaceParameters
 
@@ -71,6 +76,37 @@ class SveyraHumanEngine:
         mode = quality_mode or self.quality_mode
         with self._timed("mesh"):
             return cage_to_mesh(cage, subdivisions=SUBDIVISIONS[mode], with_uv=with_uv)
+
+    def build_canonical_seed(self, height_cm: float, with_uv: bool = True) -> SurfaceMesh:
+        """Build the reviewed neutral canonical surface at a metric height.
+
+        This deliberately does not claim identity reconstruction. It provides
+        the fixed, detailed topology that later body and face fitting deform.
+        """
+        from sveyra_human.canonical import load_canonical_body
+
+        with self._timed("canonical_mesh"):
+            return load_canonical_body().scaled_to_height(height_cm).to_surface_mesh(with_uv)
+
+    def build_canonical_rigged_seed(
+        self, height_cm: float
+    ) -> tuple["CanonicalBodyMesh", "CanonicalRig"]:
+        """Build the fixed body and its matching validated rest rig."""
+        from sveyra_human.canonical import load_canonical_body, load_canonical_rig
+
+        with self._timed("canonical_rig"):
+            body = load_canonical_body().scaled_to_height(height_cm)
+            rig = load_canonical_rig().scaled_to_height(height_cm)
+        return body, rig
+
+    def fit_canonical_parameters(
+        self, params: BodyParameters
+    ) -> tuple["CanonicalBodyMesh", "CanonicalRig", "CanonicalDeformationReport"]:
+        """Deform the fixed topology and matching rig from body measurements."""
+        from sveyra_human.canonical import deform_canonical_human
+
+        with self._timed("canonical_deformation"):
+            return deform_canonical_human(params)
 
     def fit_from_silhouettes(
         self, views: dict[str, object], height_cm: float
