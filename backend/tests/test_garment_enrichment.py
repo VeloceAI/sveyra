@@ -86,6 +86,10 @@ def test_enrich_success_updates_metadata(client: TestClient) -> None:
         occasion_tags=["formal"],
         category_confidence=0.91,
         color_confidence=0.88,
+        provider="google-vertex",
+        model="gemini-test",
+        input_tokens=800,
+        output_tokens=90,
     )
     client.app.state.vision = StubVision(analysis=analysis)
 
@@ -98,6 +102,10 @@ def test_enrich_success_updates_metadata(client: TestClient) -> None:
     assert body["attributes"]["cv"]["applied_color"] is True
     assert body["attributes"]["cv"]["pattern"] == "solid"
     assert body["attributes"]["cv"]["material"] == "wool"
+    assert body["attributes"]["cv"]["provider"] == "google-vertex"
+    assert body["attributes"]["cv"]["model"] == "gemini-test"
+    assert body["attributes"]["cv"]["input_tokens"] == 800
+    assert body["attributes"]["cv"]["output_tokens"] == 90
     assert "http" not in str(body["attributes"]).lower()
     assert "memory://" not in str(body["attributes"]).lower()
     assert UPLOAD_BYTES.decode("latin-1") not in str(body["attributes"])

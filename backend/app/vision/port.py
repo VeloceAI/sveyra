@@ -11,6 +11,10 @@ class GarmentAnalysis:
     occasion_tags: list[str] = field(default_factory=list)
     category_confidence: float = 0.0
     color_confidence: float = 0.0
+    provider: str | None = None
+    model: str | None = None
+    input_tokens: int | None = None
+    output_tokens: int | None = None
 
 
 class VisionPort:

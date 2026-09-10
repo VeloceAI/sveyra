@@ -1,5 +1,7 @@
 import { apiRequest, apiUpload } from "@/lib/api/client";
 import type {
+  AppearanceProfile,
+  AppearanceProfileRequest,
   BodyProfile,
   BodyProfileListResponse,
   MediaAsset,
@@ -8,8 +10,10 @@ import type {
   OutfitCreateRequest,
   OutfitListResponse,
   PersistedProfile,
+  PlatformReadiness,
   ProfilePersistRequest,
   RecommendationResponse,
+  RecommendationConstraints,
   AvatarBuildResponse,
   CanonicalAvatarResponse,
   HumanEnginePreviewRequest,
@@ -26,6 +30,21 @@ import type {
   WardrobeItemListResponse,
   WardrobeItemUpdateRequest,
 } from "@/lib/api/types";
+
+export function getPlatformReadiness() {
+  return apiRequest<PlatformReadiness>("/v1/platform/readiness");
+}
+
+export function getAppearanceProfile() {
+  return apiRequest<AppearanceProfile>("/v1/appearance");
+}
+
+export function saveAppearanceProfile(payload: AppearanceProfileRequest) {
+  return apiRequest<AppearanceProfile>("/v1/appearance", {
+    method: "PUT",
+    body: payload,
+  });
+}
 
 export function register(email: string, password: string) {
   return apiRequest<RegisterResponse>("/v1/auth/register", {
@@ -93,7 +112,7 @@ export async function fetchMediaObjectUrl(assetId: string): Promise<string> {
   const response = await fetch(`/v1/media/${assetId}/content`, {
     headers: { Authorization: `Bearer ${getAccessToken() ?? ""}` },
   });
-  if (!response.ok) throw new Error("Could not download the avatar.");
+  if (!response.ok) throw new Error("Could not download the media asset.");
   return URL.createObjectURL(await response.blob());
 }
 
@@ -210,10 +229,13 @@ export function getMediaAccess(assetId: string) {
   return apiRequest<MediaAssetAccessResponse>(`/v1/media/${assetId}/access`);
 }
 
-export function getRecommendations(occasion: string) {
+export function getRecommendations(
+  occasion: string,
+  constraints: RecommendationConstraints = {},
+) {
   return apiRequest<RecommendationResponse>("/v1/recommendations", {
     method: "POST",
-    body: { occasion },
+    body: { occasion, ...constraints },
   });
 }
 

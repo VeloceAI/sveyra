@@ -11,7 +11,9 @@ import numpy as np
 import pytest
 
 from sveyra_human.body.figures import figure
+from sveyra_human.body.parameters import BodyParameters
 from sveyra_human.canonical.collision import (
+    HAND_ROOTS,
     LIMB_PREFIXES,
     TRUNK_PREFIXES,
     Capsule,
@@ -35,6 +37,7 @@ def test_every_body_region_gets_a_volume(volumes):
     assert any(name.startswith("pelvis") for name in trunk)
     assert any(name.startswith("lowerarm") for name in limb)
     assert any(name.startswith("lowerleg") for name in limb)
+    assert set(HAND_ROOTS) <= limb
     assert not trunk & limb
 
 
@@ -93,13 +96,18 @@ def test_segment_distance_handles_parallel_and_crossing():
     along_x = np.array([10.0, 0.0, 0.0])
     assert segment_distance(origin, along_x, origin + 5.0, along_x + 5.0) > 0.0
 
-    # Two segments that cross at right angles touch. The distance is sampled at
-    # twelve points per segment, so over a ten unit span the answer lands within
-    # about one sample step of zero rather than exactly on it.
+    # Two segments that cross at right angles touch exactly.
     a0, a1 = np.array([-5.0, 0.0, 0.0]), np.array([5.0, 0.0, 0.0])
     b0, b1 = np.array([0.0, -5.0, 0.0]), np.array([0.0, 5.0, 0.0])
-    step = 10.0 / 11.0
-    assert segment_distance(a0, a1, b0, b1) < step
+    assert segment_distance(a0, a1, b0, b1) == pytest.approx(0.0, abs=1e-9)
+
+
+def test_segment_distance_handles_point_capsules():
+    point = np.array([0.0, 0.0, 0.0])
+    line_start = np.array([2.0, -4.0, 0.0])
+    line_end = np.array([2.0, 4.0, 0.0])
+    assert segment_distance(point, point, line_start, line_end) == pytest.approx(2.0)
+    assert segment_distance(line_start, line_end, point, point) == pytest.approx(2.0)
 
 
 def test_volumes_follow_the_body_they_were_built_from():
@@ -110,6 +118,33 @@ def test_volumes_follow_the_body_they_were_built_from():
         capsules = body_volumes(body, rig)["trunk"]
         sizes[kind] = max(c.radius_cm for c in capsules)
     assert sizes["child"] < sizes["man"]
+
+
+def test_trunk_boundary_adapts_to_photo_fitted_depth():
+    shallow = BodyParameters(height=178.0, chest_depth=16.0, waist_depth=15.0)
+    deep = BodyParameters(height=178.0, chest_depth=28.0, waist_depth=25.0)
+    radii = []
+    for params in (shallow, deep):
+        body, rig, _ = deform_canonical_human(params)
+        radii.append(max(c.radius_cm for c in body_volumes(body, rig)["trunk"]))
+    assert radii[1] > radii[0]
+
+
+def test_runtime_capsule_coordinates_are_bone_local(volumes):
+    hand = next(c for c in volumes["limb"] if c.bone == "wrist.L")
+    _body, rig, _report = deform_canonical_human(figure("man"))
+    bone = next(b for b in rig.bones if b.name == hand.bone)
+    payload = hand.to_bone_local_dict(np.asarray(bone.head_cm))
+
+    assert payload["space"] == "bone-local"
+    assert np.allclose(
+        np.asarray(payload["head"]) + np.asarray(bone.head_cm),
+        hand.head_cm,
+        atol=1e-4,
+    )
+    # This catches the original viewer bug: model-space data was parented to
+    # the bone and the bind translation was therefore applied twice.
+    assert not np.allclose(payload["head"], hand.head_cm)
 
 
 def test_the_prefix_lists_do_not_overlap():

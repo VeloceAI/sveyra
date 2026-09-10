@@ -110,6 +110,7 @@ def main() -> int:
             payload["triangleCount"] = int(faces.size // 3)
 
         payload["order"].append(kind)
+        bone_heads = {bone.name: np.asarray(bone.head_cm, dtype=float) for bone in deformed.bones}
         payload["figures"][kind] = {
             "label": f"{kind.title()} {DEFAULT_HEIGHT_CM[kind]:.0f} cm",
             "positions": b64(vertices),
@@ -121,7 +122,10 @@ def main() -> int:
             # into the body. Per figure, because a child's are not an adult's
             # scaled down.
             "volumes": {
-                group: [c.to_dict() for c in capsules]
+                # A three.js bone matrix expects local coordinates.  Canonical
+                # capsules are model-space for the reconstruction solver, so
+                # convert only at this runtime boundary.
+                group: [c.to_bone_local_dict(bone_heads[c.bone]) for c in capsules]
                 for group, capsules in body_volumes(body, deformed).items()
             },
         }

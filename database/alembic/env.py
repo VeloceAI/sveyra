@@ -1,6 +1,6 @@
+import sys
 from logging.config import fileConfig
 from pathlib import Path
-import sys
 
 from alembic import context
 from sqlalchemy import engine_from_config, pool
@@ -11,7 +11,15 @@ if str(_BACKEND) not in sys.path:
 
 from app.core.config import settings
 from app.db.base import Base
-from app.models import BodyProfile, MediaAsset, Outfit, StyleProfile, User, WardrobeItem  # noqa: F401
+from app.models import (  # noqa: F401
+    AppearanceProfile,
+    BodyProfile,
+    MediaAsset,
+    Outfit,
+    StyleProfile,
+    User,
+    WardrobeItem,
+)
 
 config = context.config
 

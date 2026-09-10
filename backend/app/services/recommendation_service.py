@@ -2,7 +2,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
-from app.core.errors import WardrobeEmptyError
+from app.core.errors import WardrobeEmptyError, WardrobeItemNotFoundError
 from app.repositories.body_profile_repository import BodyProfileRepository
 from app.repositories.profile_repository import ProfileRepository
 from app.repositories.wardrobe_repository import WardrobeRepository
@@ -37,6 +37,23 @@ class RecommendationService:
         items = self.wardrobe_repository.list_all_items_by_user_id(session, user_id)
         if not items:
             raise WardrobeEmptyError
+
+        owned_ids = {item.id for item in items if item.user_id == user_id}
+        constrained_ids = {
+            *payload.required_item_ids,
+            *payload.excluded_item_ids,
+        }
+        if payload.replacement_item_id is not None:
+            constrained_ids.add(payload.replacement_item_id)
+        if not constrained_ids.issubset(owned_ids):
+            # Use the same response for missing and foreign IDs so this endpoint
+            # never reveals whether another user's wardrobe item exists.
+            raise WardrobeItemNotFoundError
+
+        replacement_item = next(
+            (item for item in items if item.id == payload.replacement_item_id),
+            None,
+        )
 
         signals = [
             WardrobeItemSignal(
@@ -76,6 +93,20 @@ class RecommendationService:
             dislikes=dislikes,
             budget=budget,
             fit_preferences=fit_preferences,
+            required_item_ids=frozenset(payload.required_item_ids),
+            excluded_item_ids=frozenset(
+                [
+                    *payload.excluded_item_ids,
+                    *(
+                        [payload.replacement_item_id]
+                        if payload.replacement_item_id is not None
+                        else []
+                    ),
+                ]
+            ),
+            replacement_category=(
+                replacement_item.category if replacement_item is not None else None
+            ),
         )
         ranked = self.stylist.recommend(context)
         return RecommendationResponse(

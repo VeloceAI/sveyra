@@ -57,19 +57,21 @@ function clampRequest(name, request) {
 
 // How late each region starts moving, as a fraction of the transition.
 //
-// Everything starting and stopping together is what reads as robotic. Real
-// movement is led by the heavy middle and trailed by the light extremities, so
-// the spine goes first, the limbs follow and the head settles last.
+// A connected kinematic chain must share one phase.  Delaying the forearm
+// after the upper arm creates an intermediate pose which is collision-free but
+// which no elbow could produce.  Independent regions can still trail the
+// torso, while every bone from clavicle to wrist moves together.
 const LEAD = [
   ["spine", 0.0],
   ["pelvis", 0.0],
   ["upperleg", 0.06],
   ["clavicle", 0.1],
-  ["upperarm", 0.16],
+  ["shoulder", 0.1],
+  ["upperarm", 0.1],
   ["lowerleg", 0.2],
-  ["lowerarm", 0.3],
+  ["lowerarm", 0.1],
   ["foot", 0.34],
-  ["wrist", 0.42],
+  ["wrist", 0.1],
   ["neck", 0.34],
   ["head", 0.46],
 ];
@@ -120,12 +122,19 @@ const POSES = {
       // torso that never moved, and the arm reads as cut off at the shoulder.
       "clavicle.L": { abduct: 40, flex: 6 },
       "clavicle.R": { abduct: 40, flex: 6 },
-      "upperarm01.L": { abduct: 80 },
-      "upperarm01.R": { abduct: 80 },
-      "lowerarm01.L": { flex: 14 },
-      "lowerarm01.R": { flex: 14 },
       spine04: { flex: -4 },
       spine05: { flex: -4 },
+    },
+    // End-effector targets are expressed relative to each shoulder.  Outward
+    // is mirrored per side; reach is a fraction of the complete arm length.
+    // The pole keeps each elbow outside the ribs instead of letting the
+    // analytic solution flip behind the back.
+    arms: {
+      symmetric: {
+        target: { outward: 0.28, up: 0.96, forward: 0.06 },
+        reach: 0.96,
+        pole: { outward: 1.0, up: 0.12, forward: 0.18 },
+      },
     },
   },
   armsCrossed: {
@@ -136,10 +145,21 @@ const POSES = {
       // low so the elbows sit in front of the ribs rather than inside them.
       "clavicle.L": { flex: 20 },
       "clavicle.R": { flex: 20 },
-      "upperarm01.L": { flex: 34, abduct: -8, twist: 20 },
-      "upperarm01.R": { flex: 34, abduct: -8, twist: 20 },
-      "lowerarm01.L": { flex: 88 },
-      "lowerarm01.R": { flex: 88 },
+    },
+    arms: {
+      // Crossing is deliberately not mirror-perfect. One forearm must pass
+      // above and slightly in front of the other, as it does on a real body;
+      // placing both on one plane makes the wrists occupy the same volume.
+      L: {
+        target: { outward: -0.6, up: -0.25, forward: 1.0 },
+        reach: 0.82,
+        pole: { outward: 1.0, up: 0, forward: 0 },
+      },
+      R: {
+        target: { outward: -0.747, up: -0.822, forward: 1.0 },
+        reach: 0.72,
+        pole: { outward: 1.0, up: 0, forward: 0 },
+      },
     },
   },
   sit: {
@@ -229,7 +249,14 @@ function anatomicalAxes(direction) {
     flex = new THREE.Vector3().crossVectors(long, UP);
   }
   flex.normalize();
-  const abduct = new THREE.Vector3().crossVectors(long, flex).normalize();
+  // Positive abduction must move a limb away from the midline. The former
+  // long-cross-flex order pointed the axis the other way, so reach-up rotated
+  // both humeri inward through the ribs while still calling the angle +80.
+  const abduct = new THREE.Vector3().crossVectors(flex, long).normalize();
+  // Mirrored limbs need mirrored axes: the same positive request should move
+  // both the left and right limb away from the body, not send the right one
+  // across the chest.
+  if (long.x < -0.05) abduct.negate();
   return { flex: flex, abduct: abduct, twist: long };
 }
 
@@ -255,6 +282,112 @@ function rotationFor(bone, axes, request) {
   return result;
 }
 
+// Forward kinematics in the skeleton's own coordinate system.  The viewer can
+// yaw and translate the mesh, but pose construction must remain body-relative.
+function boneChain(bone) {
+  const chain = [];
+  let cursor = bone;
+  while (cursor && cursor.isBone) {
+    chain.unshift(cursor);
+    cursor = cursor.parent;
+  }
+  return chain;
+}
+
+function modelHead(bone) {
+  const point = new THREE.Vector3();
+  const rotation = new THREE.Quaternion();
+  for (const joint of boneChain(bone)) {
+    point.add(joint.position.clone().applyQuaternion(rotation));
+    rotation.multiply(joint.quaternion);
+  }
+  return point;
+}
+
+function modelParentRotation(bone) {
+  const rotation = new THREE.Quaternion();
+  const chain = boneChain(bone);
+  chain.pop();
+  for (const joint of chain) rotation.multiply(joint.quaternion);
+  return rotation;
+}
+
+function bindHead(bone) {
+  const point = new THREE.Vector3();
+  for (const joint of boneChain(bone)) point.add(joint.position);
+  return point;
+}
+
+function armVector(request, side) {
+  return new THREE.Vector3(
+    side * (request.outward || 0),
+    request.up || 0,
+    request.forward || 0,
+  );
+}
+
+function pointBoneAt(bone, bindDirection, desiredModelDirection) {
+  const desiredLocal = desiredModelDirection
+    .clone()
+    .normalize()
+    .applyQuaternion(modelParentRotation(bone).invert());
+  bone.quaternion.setFromUnitVectors(bindDirection.clone().normalize(), desiredLocal);
+}
+
+// Analytic two-bone IK for one human arm.  It solves shoulder -> elbow -> wrist
+// from a hand target and a stable elbow pole, preserving the fitted person's
+// actual upper-arm and forearm lengths.  Twist helper bones stay neutral; they
+// inherit the rigid segment rotation instead of being bent a second time.
+function solveArm(pose, suffix, bones, byName, targets) {
+  const request = pose.arms && (pose.arms[suffix] || pose.arms.symmetric);
+  if (!request) return;
+
+  const upper = bones[byName.get("upperarm01." + suffix)];
+  const elbow = bones[byName.get("lowerarm01." + suffix)];
+  const wrist = bones[byName.get("wrist." + suffix)];
+  if (!upper || !elbow || !wrist) return;
+
+  const shoulderBind = bindHead(upper);
+  const elbowBind = bindHead(elbow);
+  const wristBind = bindHead(wrist);
+  const upperBindDirection = elbowBind.clone().sub(shoulderBind);
+  const forearmBindDirection = wristBind.clone().sub(elbowBind);
+  const upperLength = upperBindDirection.length();
+  const forearmLength = forearmBindDirection.length();
+  const armLength = upperLength + forearmLength;
+  const side = suffix === "L" ? 1 : -1;
+
+  const shoulder = modelHead(upper);
+  const targetDirection = armVector(request.target, side).normalize();
+  const minimum = Math.abs(upperLength - forearmLength) + 1e-4;
+  const maximum = armLength - 1e-4;
+  const requestedDistance = armLength * (request.reach || 0.9);
+  const distance = Math.max(minimum, Math.min(maximum, requestedDistance));
+  const handTarget = shoulder.clone().addScaledVector(targetDirection, distance);
+
+  const axis = handTarget.clone().sub(shoulder).normalize();
+  const pole = armVector(request.pole, side);
+  pole.addScaledVector(axis, -pole.dot(axis));
+  if (pole.lengthSq() < 1e-8) {
+    pole.set(side, 0, 0).addScaledVector(axis, -side * axis.x);
+  }
+  pole.normalize();
+
+  const along =
+    (upperLength * upperLength - forearmLength * forearmLength + distance * distance) /
+    (2 * distance);
+  const away = Math.sqrt(Math.max(0, upperLength * upperLength - along * along));
+  const elbowTarget = shoulder.clone().addScaledVector(axis, along).addScaledVector(pole, away);
+
+  pointBoneAt(upper, upperBindDirection, elbowTarget.clone().sub(shoulder));
+  targets.set(upper, upper.quaternion.clone());
+
+  // Recalculate the elbow after rotating the complete rigid upper-arm chain.
+  const solvedElbow = modelHead(elbow);
+  pointBoneAt(elbow, forearmBindDirection, handTarget.clone().sub(solvedElbow));
+  targets.set(elbow, elbow.quaternion.clone());
+}
+
 function poseTargets(pose, bones, byName, directions) {
   const targets = new Map();
   for (const [name, request] of Object.entries(pose.joints || {})) {
@@ -263,6 +396,24 @@ function poseTargets(pose, bones, byName, directions) {
     const bone = bones[index];
     const axes = anatomicalAxes(new THREE.Vector3().fromArray(directions[index]));
     targets.set(bone, rotationFor(bone, axes, clampRequest(name, request)));
+  }
+
+  // IK needs the posed parent chain to locate each shoulder.  Evaluate in a
+  // temporary rest copy, capture the solved local rotations, then restore the
+  // live figure; the caller still receives a side-effect-free target map.
+  if (pose.arms) {
+    const saved = bones.map(function (bone) {
+      return bone.quaternion.clone();
+    });
+    bones.forEach(function (bone) {
+      bone.quaternion.identity();
+    });
+    for (const [bone, rotation] of targets) bone.quaternion.copy(rotation);
+    solveArm(pose, "L", bones, byName, targets);
+    solveArm(pose, "R", bones, byName, targets);
+    bones.forEach(function (bone, index) {
+      bone.quaternion.copy(saved[index]);
+    });
   }
   return targets;
 }

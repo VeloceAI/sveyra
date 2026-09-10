@@ -38,10 +38,12 @@ export default function WardrobeDetailPage() {
 
   useEffect(() => {
     if (!itemId) return;
-    setAssetId(getRememberedMediaAsset(itemId));
+    const rememberedAssetId = getRememberedMediaAsset(itemId);
+    setAssetId(rememberedAssetId);
     getWardrobeItem(itemId)
       .then((res) => {
         setItem(res);
+        setAssetId(res.media_asset_ids[0] ?? rememberedAssetId);
         setCategory(res.category);
         setColor(res.color);
         setBrand(res.brand);
@@ -153,6 +155,10 @@ export default function WardrobeDetailPage() {
       <p className="mono">{item.id}</p>
       <ErrorBanner message={error} />
       {notice ? <div className="notice">{notice}</div> : null}
+
+      <Link className="button" href={`/recommend?item=${item.id}`}>
+        Style this item
+      </Link>
 
       <section className="card stack">
         <h2>Media</h2>

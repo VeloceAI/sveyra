@@ -9,14 +9,16 @@ import {
 } from "@/lib/auth/session";
 
 const LINKS = [
-  { href: "/profile", label: "Profile" },
+  { href: "/today", label: "Today" },
+  { href: "/wardrobe", label: "Closet" },
+  { href: "/recommend", label: "Style" },
+  { href: "/outfits", label: "Looks" },
+  { href: "/calendar", label: "Plan" },
+  { href: "/gaps", label: "Shop" },
+  { href: "/appearance", label: "Color" },
   { href: "/avatar", label: "Avatar" },
-  { href: "/human-engine", label: "Human Engine" },
-  { href: "/wardrobe", label: "Wardrobe" },
-  { href: "/recommend", label: "Recommend" },
-  { href: "/gaps", label: "Gaps" },
-  { href: "/outfits", label: "Outfits" },
-  { href: "/calendar", label: "Calendar" },
+  { href: "/human-engine", label: "Lab" },
+  { href: "/profile", label: "You" },
 ];
 
 export function AppNav() {
@@ -24,7 +26,7 @@ export function AppNav() {
 
   return (
     <header className="nav">
-      <Link href="/wardrobe" className="nav-brand">
+      <Link href="/today" className="nav-brand">
         SVEYRA
       </Link>
       <nav className="nav-links">

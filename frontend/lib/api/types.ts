@@ -65,6 +65,7 @@ export type WardrobeItem = {
   color: string;
   brand: string;
   attributes: Record<string, unknown>;
+  media_asset_ids: string[];
 };
 
 export type WardrobeItemListResponse = {
@@ -102,6 +103,12 @@ export type MediaAssetAccessResponse = {
 export type RecommendationCandidate = {
   item_ids: string[];
   rationale: string;
+};
+
+export type RecommendationConstraints = {
+  required_item_ids?: string[];
+  excluded_item_ids?: string[];
+  replacement_item_id?: string;
 };
 
 export type RecommendationResponse = {
@@ -248,4 +255,105 @@ export type CaptureCheckResponse = {
   ready: boolean;
   views: Record<string, CaptureViewGuidance>;
   overall: string[];
+};
+
+export type SkinDepth = "very_light" | "light" | "medium" | "tan" | "deep" | "very_deep";
+export type Undertone = "cool" | "neutral" | "warm" | "olive";
+export type ContrastLevel = "low" | "medium" | "high";
+export type FaceShape =
+  | "unspecified"
+  | "oval"
+  | "round"
+  | "square"
+  | "heart"
+  | "oblong"
+  | "diamond";
+export type HairTexture = "straight" | "wavy" | "curly" | "coily" | "protective" | "shaved";
+export type MakeupIntensity = "none" | "natural" | "polished" | "statement";
+export type MakeupFinish = "natural" | "matte" | "dewy" | "satin";
+
+export type AppearanceProfileRequest = {
+  skin: {
+    tone_hex: string;
+    depth: SkinDepth;
+    undertone: Undertone;
+    sensitive: boolean;
+  };
+  face: { shape: FaceShape };
+  eyes: { color: string };
+  hair: {
+    color: string;
+    texture: HairTexture;
+    chemically_treated: boolean;
+  };
+  colour_analysis: { contrast: ContrastLevel };
+  makeup: {
+    intensity: MakeupIntensity;
+    finish: MakeupFinish;
+    focus: string[];
+    avoid: string[];
+  };
+  evidence: {
+    source: "self_reported" | "photo_estimate" | "professional";
+    user_confirmed: boolean;
+    confidence: number;
+  };
+};
+
+export type ColourSwatch = { name: string; hex: string };
+
+export type AppearanceProfile = AppearanceProfileRequest & {
+  id: string;
+  user_id: string;
+  palette: {
+    title: string;
+    summary: string;
+    best_colours: ColourSwatch[];
+    neutrals: ColourSwatch[];
+    metals: string[];
+    combinations: {
+      name: string;
+      colours: ColourSwatch[];
+      guidance: string;
+    }[];
+    makeup: {
+      complexion: string;
+      cheeks: string;
+      lips: string;
+      eyes: string;
+      finish: string;
+    };
+  };
+  created_at: string | null;
+  updated_at: string | null;
+};
+
+export type CapabilityStatus = "ready" | "demo" | "setup_required" | "planned";
+
+export type PlatformReadiness = {
+  parity_phase: string;
+  product_message: string;
+  personal_model: {
+    style_ready: boolean;
+    appearance_ready: boolean;
+    body_ready: boolean;
+    body_measurement_count: number;
+    wardrobe_items: number;
+    enriched_items: number;
+    core_completion_percent: number;
+    next_action: {
+      label: string;
+      href: string;
+      reason: string;
+    };
+  };
+  capabilities: {
+    key: string;
+    label: string;
+    status: CapabilityStatus;
+    provider: string;
+    summary: string;
+    limitation: string | null;
+    href: string | null;
+  }[];
 };

@@ -6,6 +6,7 @@ from app.avatar.errors import AvatarUnavailableError
 from app.avatar.port import AvatarPort
 from app.core.config import settings
 from app.core.errors import (
+    AppearanceProfileNotFoundError,
     BodyProfileNotFoundError,
     EmailAlreadyRegisteredError,
     EmptyMediaUploadError,
@@ -25,6 +26,7 @@ from app.core.errors import (
     WardrobeItemNotFoundError,
     WardrobeMediaMissingError,
     WearLogNotFoundError,
+    appearance_profile_not_found_handler,
     avatar_unavailable_handler,
     body_profile_not_found_handler,
     email_already_registered_handler,
@@ -51,6 +53,7 @@ from app.core.errors import (
     wear_log_not_found_handler,
 )
 from app.core.rate_limit import SlidingWindowRateLimiter
+from app.routes.appearance_routes import router as appearance_router
 from app.routes.auth_routes import router as auth_router
 from app.routes.avatar_routes import router as avatar_router
 from app.routes.body_profile_routes import router as body_profile_router
@@ -58,6 +61,7 @@ from app.routes.calendar_routes import router as calendar_router
 from app.routes.health_routes import router as health_router
 from app.routes.media_asset_routes import router as media_asset_router
 from app.routes.outfit_routes import router as outfit_router
+from app.routes.platform_routes import router as platform_router
 from app.routes.profile_routes import router as profile_router
 from app.routes.recommendation_routes import router as recommendation_router
 from app.routes.wardrobe_routes import router as wardrobe_router
@@ -91,6 +95,10 @@ def create_app(
     app.add_exception_handler(404, not_found_handler)
     app.add_exception_handler(RequestValidationError, request_validation_handler)
     app.add_exception_handler(ProfileNotFoundError, profile_not_found_handler)
+    app.add_exception_handler(
+        AppearanceProfileNotFoundError,
+        appearance_profile_not_found_handler,
+    )
     app.add_exception_handler(UserNotFoundError, user_not_found_handler)
     app.add_exception_handler(BodyProfileNotFoundError, body_profile_not_found_handler)
     app.add_exception_handler(WardrobeItemNotFoundError, wardrobe_item_not_found_handler)
@@ -116,6 +124,7 @@ def create_app(
     app.add_exception_handler(WearLogNotFoundError, wear_log_not_found_handler)
     app.include_router(health_router)
     app.include_router(auth_router, prefix="/v1")
+    app.include_router(appearance_router, prefix="/v1")
     app.include_router(avatar_router, prefix="/v1")
     app.include_router(calendar_router, prefix="/v1")
     app.include_router(profile_router, prefix="/v1")
@@ -123,6 +132,7 @@ def create_app(
     app.include_router(wardrobe_router, prefix="/v1")
     app.include_router(media_asset_router, prefix="/v1")
     app.include_router(outfit_router, prefix="/v1")
+    app.include_router(platform_router, prefix="/v1")
     app.include_router(recommendation_router, prefix="/v1")
     return app
 

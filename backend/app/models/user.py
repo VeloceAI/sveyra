@@ -8,6 +8,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
 
 if TYPE_CHECKING:
+    from app.models.appearance_profile import AppearanceProfile
     from app.models.body_profile import BodyProfile
     from app.models.media_asset import MediaAsset
     from app.models.outfit import Outfit
@@ -28,6 +29,7 @@ class User(Base):
         server_default=func.now(),
     )
     style_profiles: Mapped[list["StyleProfile"]] = relationship(back_populates="user")
+    appearance_profiles: Mapped[list["AppearanceProfile"]] = relationship(back_populates="user")
     body_profiles: Mapped[list["BodyProfile"]] = relationship(back_populates="user")
     wardrobe_items: Mapped[list["WardrobeItem"]] = relationship(back_populates="user")
     media_assets: Mapped[list["MediaAsset"]] = relationship(back_populates="user")

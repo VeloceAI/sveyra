@@ -82,6 +82,18 @@ def apply_garment_analysis(
     if tags:
         secondary["occasion_tags"] = tags
 
+    provenance: dict[str, object] = {}
+    provider = _safe_secondary(analysis.provider)
+    model = _safe_secondary(analysis.model)
+    if provider:
+        provenance["provider"] = provider
+    if model:
+        provenance["model"] = model
+    if isinstance(analysis.input_tokens, int) and analysis.input_tokens >= 0:
+        provenance["input_tokens"] = analysis.input_tokens
+    if isinstance(analysis.output_tokens, int) and analysis.output_tokens >= 0:
+        provenance["output_tokens"] = analysis.output_tokens
+
     attributes["cv"] = {
         "suggested_category": _safe_secondary(analysis.category),
         "suggested_color": _safe_secondary(analysis.color),
@@ -90,6 +102,7 @@ def apply_garment_analysis(
         "applied_category": applied_category,
         "applied_color": applied_color,
         **secondary,
+        **provenance,
     }
     return category, color, attributes
 
@@ -157,4 +170,5 @@ class GarmentEnrichmentService:
             color=updated.color,
             brand=updated.brand,
             attributes=updated.attributes,
+            media_asset_ids=[asset.id for asset in updated.media_assets],
         )

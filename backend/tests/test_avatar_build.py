@@ -198,6 +198,9 @@ def test_developer_preview_rejects_unknown_or_impossible_measurements(
 
 
 def test_canonical_preview_requires_the_real_engine_backend(client: TestClient) -> None:
+    from app.avatar.stub import StubAvatar
+
+    client.app.state.avatar = StubAvatar()
     _user_id, headers = register_and_auth(client, "canonical-stub@example.com")
     response = client.post(
         "/v1/avatar/canonical-preview",
@@ -255,7 +258,10 @@ def test_building_an_avatar_requires_authentication(engine_client: TestClient) -
 
 
 def test_the_stub_backend_admits_it_cannot_do_this(client: TestClient) -> None:
-    """The default backend must say so rather than returning a fake avatar."""
+    """An explicitly selected stub must say so rather than returning a fake avatar."""
+    from app.avatar.stub import StubAvatar
+
+    client.app.state.avatar = StubAvatar()
     _user_id, headers = register_and_auth(client, "stub@example.com")
     response = client.post(
         "/v1/avatar/build",

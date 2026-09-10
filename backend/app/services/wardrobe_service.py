@@ -127,4 +127,5 @@ class WardrobeService:
             color=item.color,
             brand=item.brand,
             attributes=item.attributes,
+            media_asset_ids=[asset.id for asset in item.media_assets],
         )

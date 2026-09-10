@@ -27,8 +27,15 @@ class Settings(BaseSettings):
     refresh_token_ttl_seconds: int = Field(default=30 * 24 * 3600, gt=0, le=365 * 24 * 3600)
     auth_rate_limit_max_requests: int = Field(default=10, gt=0, le=1000)
     auth_rate_limit_window_seconds: int = Field(default=60, gt=0, le=3600)
-    avatar_backend: str = "stub"
+    # The repository installs the local human engine as an editable dependency.
+    # Select it by default so a development checkout can render its canonical
+    # GLB without a hidden environment switch.
+    avatar_backend: str = "sveyra"
     vision_backend: str = "stub"
+    google_cloud_project: str | None = None
+    google_cloud_location: str = "global"
+    vertex_vision_model_id: str = "gemini-3.1-flash-lite"
+    vision_timeout_seconds: float = Field(default=30.0, gt=0, le=120)
     stylist_backend: str = "stub"
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")

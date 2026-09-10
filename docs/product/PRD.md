@@ -1,5 +1,9 @@
 # SVEYRA Product Requirements
 
+See [`../platform-blueprint/README.md`](../platform-blueprint/README.md) for the
+current implementation baseline, complete delivery checkpoints, UI flows,
+provider decisions, and quality/privacy gates.
+
 ## Vision
 
 SVEYRA becomes the user's digital style extension. It understands what they own, how they look, what fits, where they are going, what they like, and what they should buy next.

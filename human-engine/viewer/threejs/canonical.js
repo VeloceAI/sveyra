@@ -122,7 +122,7 @@ function build(kind) {
 
   // Measured in the bind pose, so bones that are anatomically joined do not
   // read as collisions for the rest of the session.
-  boundary = new BodyBoundary(entry.volumes || {}, byName, bones);
+  boundary = new BodyBoundary(entry.volumes || {}, byName, bones, table.restHead);
   mesh.updateMatrixWorld(true);
   boundary.calibrate();
 
@@ -178,8 +178,12 @@ renderer.domElement.addEventListener("pointermove", function (event) {
   const dy = (event.clientY - last.y) * 0.01;
   last = { x: event.clientX, y: event.clientY };
   if (held) {
+    const from = poseSnapshot();
     held.rotation.z -= dx;
     held.rotation.x += dy;
+    const to = poseSnapshot();
+    allowed = constrainPose(from, to);
+    collisionHeld = allowed < 0.995;
     readout();
   } else if (event.buttons) {
     orbit.theta -= dx * 0.6;
@@ -227,7 +231,9 @@ function readout() {
   const limited =
     allowed < 0.995
       ? ` · held at ${Math.round(allowed * 100)}% of the pose, the rest puts a limb inside the body`
-      : "";
+      : collisionHeld
+        ? " - motion held at the body boundary"
+        : "";
   document.getElementById("joint").textContent = held
     ? `${held.name} — drag to rotate${limited}`
     : `click the body to pick the bone under the pointer${limited}`;
@@ -281,6 +287,10 @@ function start() {
 
   buildPosePanel();
   build(DATA.order[0]);
+  // A developer can deep-link to a pose when reviewing the mesh, skeleton, or
+  // collision proxies without stepping through the UI first.
+  const requestedPose = new URLSearchParams(window.location.search).get("pose");
+  if (requestedPose && POSES[requestedPose]) applyPose(requestedPose, false);
   resize();
   place();
   (function tick(now) {
@@ -309,6 +319,7 @@ let playing = null;
 let blend = null;
 let turntable = false;
 let allowed = 1;
+let collisionHeld = false;
 
 function indexBones() {
   byName.clear();
@@ -317,6 +328,29 @@ function indexBones() {
   });
   restRotations = bones.map(function (b) {
     return b.quaternion.clone();
+  });
+}
+
+function poseSnapshot() {
+  return bones.map(function (bone) {
+    return bone.quaternion.clone();
+  });
+}
+
+function applyPoseShare(from, to, share) {
+  bones.forEach(function (bone, i) {
+    bone.quaternion.slerpQuaternions(from[i], to[i], share);
+  });
+  mesh.updateMatrixWorld(true);
+}
+
+function constrainPose(from, to) {
+  if (!boundary) {
+    applyPoseShare(from, to, 1);
+    return 1;
+  }
+  return resolve(boundary, bones, from, to, function (share) {
+    applyPoseShare(from, to, share);
   });
 }
 
@@ -341,23 +375,15 @@ function applyPose(key, animate, yawOverride) {
 
   // How much of the pose the body actually allows. A reaching arm is mostly
   // reachable; it is only the last part of it that goes through the ribs.
-  const from = bones.map(function (b) {
-    return b.quaternion.clone();
-  });
-  const share = boundary
-    ? resolve(boundary, bones, from, to, function (k) {
-        bones.forEach(function (bone, i) {
-          bone.quaternion.slerpQuaternions(from[i], to[i], k);
-        });
-        mesh.updateMatrixWorld(true);
-      })
-    : 1;
+  const from = poseSnapshot();
+  const share = constrainPose(from, to);
   if (share < 1) {
     bones.forEach(function (bone, i) {
       to[i] = from[i].clone().slerp(to[i], share);
     });
   }
   allowed = share;
+  collisionHeld = false;
 
   if (!animate) {
     bones.forEach(function (bone, i) {
@@ -380,6 +406,9 @@ function applyPose(key, animate, yawOverride) {
     toYaw: yaw,
     fromPos: mesh.position.clone(),
     toPos: offset,
+    safe: from.map(function (rotation) {
+      return rotation.clone();
+    }),
     started: performance.now(),
   };
 }
@@ -391,13 +420,26 @@ function stepBlend(now) {
   const t = Math.min(1, (now - blend.started) / EASE_MS);
 
   bones.forEach(function (bone, i) {
-    // Each bone waits out its lead, then covers the rest of the transition in
-    // the time that remains. Nothing starts or arrives together, which is the
-    // whole difference between a body moving and a mechanism moving.
+    // Independent regions can trail the torso, but poses.js assigns one lead
+    // to every joint in a connected arm chain so an elbow never lags behind
+    // its shoulder or wrist.
     const lead = blend.lead[i];
     const own = Math.max(0, Math.min(1, (t - lead) / (1 - lead)));
     bone.quaternion.slerpQuaternions(blend.from[i], blend.to[i], smooth(own));
   });
+  mesh.updateMatrixWorld(true);
+
+  // A destination can be clear while a staggered shoulder/arm transition cuts
+  // through the ribs on the way there. Project every displayed frame from the
+  // last safe frame, so the moving skin never crosses the body's boundary.
+  if (boundary && !boundary.clear()) {
+    const candidate = poseSnapshot();
+    const share = constrainPose(blend.safe, candidate);
+    collisionHeld = share < 0.995;
+  } else {
+    collisionHeld = false;
+  }
+  blend.safe = poseSnapshot();
   readout();
 
   const k = smooth(t);

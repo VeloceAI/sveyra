@@ -10,18 +10,29 @@
 // they are anatomically joined. What matters is overlap *beyond* rest, so the
 // rest state is measured once at bind and every pose is judged against it.
 
-const CLEARANCE_CM = 1.0; // let a limb rest against the body, not sink into it
+// A few millimetres absorb proxy-fit and export rounding, not visible overlap.
+const PENETRATION_TOLERANCE_CM = 0.25;
 
-function capsuleBones(capsules, byName, bones) {
+function capsuleBones(capsules, byName, bones, restHeads) {
   return capsules
     .map(function (capsule) {
       const index = byName.get(capsule.bone);
       if (index === undefined) return null;
+      const head = new THREE.Vector3().fromArray(capsule.head).multiplyScalar(0.01);
+      const tail = new THREE.Vector3().fromArray(capsule.tail).multiplyScalar(0.01);
+
+      // New exports are bone-local. Keep the conversion here too so an older
+      // cached data file cannot silently move every boundary by a second copy
+      // of the bone's bind translation.
+      if (capsule.space !== 'bone-local') {
+        const origin = new THREE.Vector3().fromArray(restHeads[index]);
+        head.sub(origin);
+        tail.sub(origin);
+      }
       return {
         bone: bones[index],
-        // Capsule ends in the bone's own frame, so they follow it when posed.
-        head: new THREE.Vector3().fromArray(capsule.head).multiplyScalar(0.01),
-        tail: new THREE.Vector3().fromArray(capsule.tail).multiplyScalar(0.01),
+        head: head,
+        tail: tail,
         radius: capsule.radius * 0.01,
         name: capsule.bone,
       };
@@ -29,25 +40,78 @@ function capsuleBones(capsules, byName, bones) {
     .filter(Boolean);
 }
 
-// Sampled rather than solved. The closed form for segment-to-segment distance
-// has several degenerate cases, and this runs over a couple of dozen capsules.
-const _a = new THREE.Vector3();
-const _b = new THREE.Vector3();
+const _u = new THREE.Vector3();
+const _v = new THREE.Vector3();
+const _w = new THREE.Vector3();
+const _closest = new THREE.Vector3();
 
 function segmentDistance(a0, a1, b0, b1) {
-  let best = Infinity;
-  for (let i = 0; i <= 8; i++) {
-    _a.lerpVectors(a0, a1, i / 8);
-    for (let j = 0; j <= 8; j++) {
-      _b.lerpVectors(b0, b1, j / 8);
-      best = Math.min(best, _a.distanceTo(_b));
+  _u.subVectors(a1, a0);
+  _v.subVectors(b1, b0);
+  _w.subVectors(a0, b0);
+  const aa = _u.dot(_u);
+  const bb = _u.dot(_v);
+  const cc = _v.dot(_v);
+  const dd = _u.dot(_w);
+  const ee = _v.dot(_w);
+  const epsilon = 1e-12;
+
+  if (aa <= epsilon && cc <= epsilon) return a0.distanceTo(b0);
+  if (aa <= epsilon) {
+    const t = Math.max(0, Math.min(1, ee / cc));
+    return _closest.copy(_w).addScaledVector(_v, -t).length();
+  }
+  if (cc <= epsilon) {
+    const s = Math.max(0, Math.min(1, -dd / aa));
+    return _closest.copy(_w).addScaledVector(_u, s).length();
+  }
+
+  const denominator = aa * cc - bb * bb;
+  let sNumerator;
+  let sDenominator = denominator;
+  let tNumerator;
+  let tDenominator = denominator;
+  if (denominator <= epsilon) {
+    sNumerator = 0;
+    sDenominator = 1;
+    tNumerator = ee;
+    tDenominator = cc;
+  } else {
+    sNumerator = bb * ee - cc * dd;
+    tNumerator = aa * ee - bb * dd;
+    if (sNumerator < 0) {
+      sNumerator = 0;
+      tNumerator = ee;
+      tDenominator = cc;
+    } else if (sNumerator > sDenominator) {
+      sNumerator = sDenominator;
+      tNumerator = ee + bb;
+      tDenominator = cc;
     }
   }
-  return best;
-}
 
-const _h = new THREE.Vector3();
-const _t = new THREE.Vector3();
+  if (tNumerator < 0) {
+    tNumerator = 0;
+    if (-dd < 0) sNumerator = 0;
+    else if (-dd > aa) sNumerator = sDenominator;
+    else {
+      sNumerator = -dd;
+      sDenominator = aa;
+    }
+  } else if (tNumerator > tDenominator) {
+    tNumerator = tDenominator;
+    if (-dd + bb < 0) sNumerator = 0;
+    else if (-dd + bb > aa) sNumerator = sDenominator;
+    else {
+      sNumerator = -dd + bb;
+      sDenominator = aa;
+    }
+  }
+
+  const s = Math.abs(sNumerator) <= epsilon ? 0 : sNumerator / sDenominator;
+  const t = Math.abs(tNumerator) <= epsilon ? 0 : tNumerator / tDenominator;
+  return _closest.copy(_w).addScaledVector(_u, s).addScaledVector(_v, -t).length();
+}
 
 function worldEnds(entry, outHead, outTail) {
   entry.bone.updateMatrixWorld();
@@ -79,10 +143,32 @@ function related(a, b) {
 }
 
 class BodyBoundary {
-  constructor(volumes, byName, bones) {
-    this.limbs = capsuleBones(volumes.limb || [], byName, bones);
-    this.trunk = capsuleBones(volumes.trunk || [], byName, bones);
+  constructor(volumes, byName, bones, restHeads) {
+    this.limbs = capsuleBones(volumes.limb || [], byName, bones, restHeads);
+    this.trunk = capsuleBones(volumes.trunk || [], byName, bones, restHeads);
     this.baseline = new Map();
+    this.allowance = new Map();
+  }
+
+  _contactAllowance(first, second) {
+    // A seated proximal thigh presses against the lower abdomen. Circular
+    // capsules overstate that contact because a torso is wider than it is
+    // deep; allow a body-scaled part of the thigh radius for this one soft,
+    // anatomically connected region. Hands and arms receive no such allowance.
+    const thigh = first.name.startsWith('upperleg02');
+    const lowerTorso = /^(spine0[345]|pelvis)/.test(second.name);
+    return thigh && lowerTorso ? first.radius * 0.7 : 0;
+  }
+
+  _measurePair(first, second, out, ah, at, bh, bt) {
+    if (related(first.bone, second.bone)) return;
+    worldEnds(first, ah, at);
+    worldEnds(second, bh, bt);
+    const gap = segmentDistance(ah, at, bh, bt);
+    const overlap = first.radius + second.radius - gap;
+    const pair = `${first.name}|${second.name}`;
+    this.allowance.set(pair, this._contactAllowance(first, second));
+    if (overlap > 0) out.set(pair, overlap);
   }
 
   // Overlap in the current pose, per limb-trunk pair.
@@ -94,13 +180,17 @@ class BodyBoundary {
     const bt = new THREE.Vector3();
 
     for (const limb of this.limbs) {
-      worldEnds(limb, ah, at);
       for (const trunk of this.trunk) {
-        if (related(limb.bone, trunk.bone)) continue;
-        worldEnds(trunk, bh, bt);
-        const gap = segmentDistance(ah, at, bh, bt);
-        const overlap = limb.radius + trunk.radius - gap;
-        if (overlap > 0) out.set(`${limb.name}|${trunk.name}`, overlap);
+        this._measurePair(limb, trunk, out, ah, at, bh, bt);
+      }
+    }
+
+    // Arms, hands and legs are part of the boundary too. This prevents a
+    // crossed-arm or reconstructed pose from sending one hand through the
+    // opposite arm or a thigh while still being clear of the torso.
+    for (let i = 0; i < this.limbs.length; i++) {
+      for (let j = i + 1; j < this.limbs.length; j++) {
+        this._measurePair(this.limbs[i], this.limbs[j], out, ah, at, bh, bt);
       }
     }
     return out;
@@ -116,7 +206,8 @@ class BodyBoundary {
     let worst = 0;
     let where = "";
     for (const [pair, overlap] of this.measure()) {
-      const extra = overlap - (this.baseline.get(pair) || 0);
+      const extra =
+        overlap - (this.baseline.get(pair) || 0) - (this.allowance.get(pair) || 0);
       if (extra > worst) {
         worst = extra;
         where = pair;
@@ -126,7 +217,7 @@ class BodyBoundary {
   }
 
   clear() {
-    return this.intrusion().depth <= CLEARANCE_CM;
+    return this.intrusion().depth <= PENETRATION_TOLERANCE_CM;
   }
 }
 

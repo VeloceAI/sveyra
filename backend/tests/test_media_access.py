@@ -128,6 +128,19 @@ def test_a_glb_is_served_with_its_own_media_type(client: TestClient) -> None:
     assert response.headers["content-type"].startswith("model/gltf-binary")
 
 
+def test_images_are_served_with_browser_renderable_media_types(client: TestClient) -> None:
+    _user_id, headers = register_and_auth(client, "content-image@example.com")
+    payload = b"\x89PNG\r\n\x1a\n" + b"\x00" * 60
+    uploaded = client.post(
+        "/v1/media/upload",
+        headers=headers,
+        files={"file": ("garment.png", payload, "image/png")},
+    ).json()
+
+    response = client.get(f"/v1/media/{uploaded['id']}/content", headers=headers)
+    assert response.headers["content-type"].startswith("image/png")
+
+
 def test_another_user_cannot_download_your_bytes(client: TestClient) -> None:
     _a, headers_a = register_and_auth(client, "content-a@example.com")
     _b, headers_b = register_and_auth(client, "content-b@example.com")

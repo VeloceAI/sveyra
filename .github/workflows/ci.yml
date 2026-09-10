@@ -111,5 +111,8 @@ jobs:
       - name: Test
         run: npm --workspace @sveyra/web run test
 
+      - name: Human motion collision
+        run: npm run human:test-motion
+
       - name: Build
         run: npm --workspace @sveyra/web run build

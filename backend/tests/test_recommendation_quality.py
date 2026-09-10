@@ -232,6 +232,41 @@ def test_ranking_is_deterministic() -> None:
     assert all(entry.rationale.strip() for entry in first)
 
 
+def test_locked_accessory_is_added_to_complete_looks() -> None:
+    shirt = WardrobeItemSignal(uuid4(), "shirt", "white", "house", {})
+    trousers = WardrobeItemSignal(uuid4(), "trousers", "black", "house", {})
+    bag = WardrobeItemSignal(uuid4(), "bag", "black", "house", {})
+
+    ranked = rank_outfits(
+        [shirt, trousers, bag],
+        "work",
+        required_item_ids={bag.id},
+    )
+
+    assert ranked
+    assert all({shirt.id, trousers.id, bag.id}.issubset(set(entry.item_ids)) for entry in ranked)
+
+
+def test_accessory_swap_uses_another_accessory_without_changing_core() -> None:
+    shirt = WardrobeItemSignal(uuid4(), "shirt", "white", "house", {})
+    trousers = WardrobeItemSignal(uuid4(), "trousers", "black", "house", {})
+    old_bag = WardrobeItemSignal(uuid4(), "bag", "black", "house", {})
+    new_bag = WardrobeItemSignal(uuid4(), "handbag", "tan", "house", {})
+
+    ranked = rank_outfits(
+        [shirt, trousers, old_bag, new_bag],
+        "work",
+        required_item_ids={shirt.id, trousers.id},
+        excluded_item_ids={old_bag.id},
+        replacement_category=old_bag.category,
+    )
+
+    assert ranked
+    for entry in ranked:
+        assert {shirt.id, trousers.id, new_bag.id}.issubset(set(entry.item_ids))
+        assert old_bag.id not in entry.item_ids
+
+
 def test_rationale_is_signal_backed_and_safe() -> None:
     ranked = rank_outfits(
         [
