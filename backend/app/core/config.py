@@ -10,6 +10,12 @@ _DEFAULT_MEDIA_MAX_UPLOAD_BYTES = 25 * 1024 * 1024
 
 class Settings(BaseSettings):
     app_env: str = "local"
+
+    # Off unless someone says otherwise. Gating the dev-session route on app_env
+    # alone was fail-open: app_env defaults to "local", so a deployment that
+    # simply forgot to set APP_ENV kept an unauthenticated token-minting
+    # endpoint live. An explicit opt-in cannot be reached by forgetting.
+    enable_dev_session: bool = False
     database_url: str = "postgresql+psycopg://sveyra:sveyra@localhost:5432/sveyra"
     redis_url: str = "redis://localhost:6379/0"
     model_provider: str = "openai"

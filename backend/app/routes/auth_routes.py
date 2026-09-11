@@ -27,7 +27,15 @@ _LOCAL_ENVS = frozenset({"local", "dev", "development", "test"})
 
 @router.post("/dev-session", response_model=TokenResponse, dependencies=[_auth_rate_limit])
 def development_session(session: Session = Depends(get_db)) -> TokenResponse:
-    """Skip the login screen locally while still exercising real JWT auth."""
+    """Skip the login screen locally while still exercising real JWT auth.
+
+    Needs both an explicit ENABLE_DEV_SESSION and a local APP_ENV. The flag is
+    what makes it safe: a deployment that sets neither gets nothing, where
+    relying on APP_ENV alone meant forgetting one variable was enough to leave
+    this open.
+    """
+    if not settings.enable_dev_session:
+        raise HTTPException(status_code=404, detail="Not found")
     if settings.app_env.strip().lower() not in _LOCAL_ENVS:
         raise HTTPException(status_code=404, detail="Not found")
     return create_development_session(session)
