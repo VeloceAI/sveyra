@@ -61,8 +61,9 @@ def test_login_success(client: TestClient) -> None:
 
 
 def test_local_development_session_skips_the_login_screen_with_real_tokens(
-    client: TestClient,
+    client: TestClient, monkeypatch,
 ) -> None:
+    monkeypatch.setattr(settings, "enable_dev_session", True)
     response = client.post("/v1/auth/dev-session", json={})
 
     assert response.status_code == 200
@@ -75,9 +76,25 @@ def test_local_development_session_skips_the_login_screen_with_real_tokens(
     assert protected.status_code == 200
 
 
+def test_development_session_is_closed_unless_explicitly_enabled(
+    client: TestClient,
+) -> None:
+    """The default must be closed, with nothing set either way.
+
+    Gating this on app_env alone was fail-open: app_env defaults to "local", so
+    a deployment that forgot to set APP_ENV kept an unauthenticated
+    token-minting endpoint live.
+    """
+    assert settings.enable_dev_session is False
+    response = client.post("/v1/auth/dev-session", json={})
+    assert response.status_code == 404
+
+
 def test_development_session_is_not_exposed_in_production(
     client: TestClient, monkeypatch,
 ) -> None:
+    """Even with the flag on, a non-local APP_ENV closes it."""
+    monkeypatch.setattr(settings, "enable_dev_session", True)
     monkeypatch.setattr(settings, "app_env", "production")
     response = client.post("/v1/auth/dev-session", json={})
     assert response.status_code == 404

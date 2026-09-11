@@ -172,13 +172,18 @@ npm run typecheck
 npm run build
 ```
 
-Locally, `POST /v1/auth/dev-session` issues real tokens without a login so the
-app can be driven without creating an account.
+`POST /v1/auth/dev-session` issues real tokens without a login, so the app can
+be driven without creating an account. It is **off by default** and needs an
+explicit opt-in:
 
-> **Before deploying anywhere real, set `APP_ENV`.** That route is gated on
-> `APP_ENV` being local/dev/development/test, and `app_env` defaults to
-> `"local"` in `backend/app/core/config.py`. A deployment that forgets to set it
-> leaves an unauthenticated token-minting endpoint live.
+```
+ENABLE_DEV_SESSION=true
+```
+
+It also still requires `APP_ENV` to be local/dev/development/test, so both have
+to be wrong before it opens. The flag exists because gating on `APP_ENV` alone
+was fail-open: `app_env` defaults to `"local"`, so forgetting one variable was
+enough to leave an unauthenticated token endpoint live.
 
 ---
 
@@ -203,8 +208,9 @@ gcloud auth application-default login
 than silently falling back to the stub.
 
 **`JWT_SECRET` must be changed outside local.** The config refuses to start with
-the default value when `APP_ENV` is not local, but that check is skipped while
-`APP_ENV` is local — which is also the default.
+the default value when `APP_ENV` is not local. That check is skipped while
+`APP_ENV` is local, which is the default, so a deployment that sets neither
+variable runs on a known secret. Set `APP_ENV` first on anything reachable.
 
 ---
 
