@@ -147,6 +147,17 @@ Without the models the server still starts and serves the viewer, and says
 plainly that reconstruction is unavailable rather than answering uploads with a
 body nothing looked at.
 
+`POST /reconstruct` takes `{ "image": "<base64 or data URL>", "height_cm": 175 }`
+and returns the canonical body, its measurements, the detected pose landmarks,
+and which fitting path produced the numbers. It is currently an endpoint only:
+the browser upload panel belonged to the previous viewer and went with it, so
+drive this with curl or a script until it is rebuilt on the canonical viewer.
+
+The body it returns is unsplit, 13,380 vertices, matching what
+`export_canonical_viewer.py` writes. Those two disagreed for a while — the
+server was sending the UV-split 14,517 form — and nothing could consume the
+result.
+
 ### Known limitation
 
 Girths come back too large. The arms are inside the silhouette, and a front-on

@@ -35,6 +35,7 @@ from sveyra_human.body.anatomy import measurements  # noqa: E402
 from sveyra_human.body.figures import FigureProportions  # noqa: E402
 from sveyra_human.body.parameters import BodyParameters  # noqa: E402
 from sveyra_human.canonical.deformation import deform_canonical_human  # noqa: E402
+from sveyra_human.canonical.render import drawable  # noqa: E402
 from sveyra_human.vision.silhouette import silhouette_from_segmentation  # noqa: E402
 from sveyra_human.vision.torso_extraction import extract as extract_torso  # noqa: E402
 
@@ -168,11 +169,13 @@ def reconstruct(
     # hands, feet, a face and a 163 bone rig, so a body can be posed, textured
     # and dressed later without any of it being rebuilt.
     body, canonical_rig, report = deform_canonical_human(params)
-    # Render form: split at UV seams, triangulated. The canonical vertex count
-    # stays the topology contract; this is what a viewer can draw.
-    mesh = body.to_surface_mesh(with_uv=True)
+    # Unsplit, so the vertex count matches what the viewer was built from and a
+    # reconstructed body can be dropped straight in beside the stock figures.
+    # Returning the UV-split form made these two disagree, 14,517 against
+    # 13,380, and nothing could consume the result.
+    verts, faces, normals = drawable(body)
 
-    verts = (mesh.vertices * 0.01).astype(np.float32)
+    verts = verts.copy()
     verts[:, 0] -= float(verts[:, 0].mean())
     verts[:, 2] -= float(verts[:, 2].mean())
 
@@ -183,11 +186,10 @@ def reconstruct(
         if landmarks
         else (Handler.pose_error if pose is None else "no person found"),
         "positions": base64.b64encode(verts.tobytes()).decode(),
-        "normals": base64.b64encode(mesh.normals().astype(np.float32).tobytes()).decode(),
+        "normals": base64.b64encode(normals.tobytes()).decode(),
         "figure": kind,
         "vertices": int(body.vertex_count),
-        "render_vertices": int(mesh.vertex_count),
-        "triangles": int(mesh.face_count),
+        "triangles": int(faces.size // 3),
         "bones": len(canonical_rig.bones),
         "clamped": list(report.clamped_fields),
         "measurements": {k: round(float(v), 1) for k, v in measurements(params).items()},
@@ -219,7 +221,7 @@ def main() -> int:
         "pose ready" if Handler.pose is not None else f"pose disabled: {Handler.pose_error}"
     )
 
-    print(f"viewer on http://localhost:{args.port}/  (serving {VIEWER})")
+    print(f"viewer on http://localhost:{args.port}/canonical.html")
     ThreadingHTTPServer(("127.0.0.1", args.port), Handler).serve_forever()
     return 0
 
